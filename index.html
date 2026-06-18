@@ -31,6 +31,15 @@
     </div>
 
     <div class="card">
+      <input
+        id="input-name"
+        type="text"
+        placeholder="Ton pseudo (optionnel)"
+        maxlength="20"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+      />
       <button id="btn-create" class="btn btn-primary">Créer une partie</button>
       <div class="divider"><span>ou rejoindre</span></div>
       <div class="join-group">
@@ -48,6 +57,16 @@
       </div>
       <p id="error-msg" class="error-msg hidden"></p>
     </div>
+    <div class="lb-card">
+      <div class="lb-header">
+        <span>🏆</span>
+        <span class="lb-title">Classement</span>
+      </div>
+      <div id="leaderboard-list" class="lb-list">
+        <p class="lb-empty">Aucune partie jouée pour l'instant.</p>
+      </div>
+    </div>
+
   </div>
 
   <!-- ── Écran 2 : Attente ── -->

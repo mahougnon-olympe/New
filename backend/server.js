@@ -9,7 +9,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-const rooms = new Map();
+const rooms      = new Map();
+const leaderboard = new Map(); // name -> { wins, losses, draws }
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const RECONNECT_MS = 30_000;
 const VALID_GAMES = new Set(['connect4', 'tictactoe', 'chess']);
@@ -34,6 +35,24 @@ function createInitialState(gameType) {
   }
 }
 
+// ── Leaderboard helpers ────────────────────────────────────────────────────
+
+function updateLeaderboard(name, result) {
+  if (!name) return;
+  const e = leaderboard.get(name) || { wins: 0, losses: 0, draws: 0 };
+  if (result === 'win')  e.wins++;
+  if (result === 'loss') e.losses++;
+  if (result === 'draw') e.draws++;
+  leaderboard.set(name, e);
+}
+
+function getLeaderboardData() {
+  return [...leaderboard.entries()]
+    .map(([name, s]) => ({ name, wins: s.wins, losses: s.losses, draws: s.draws }))
+    .sort((a, b) => b.wins - a.wins || (b.wins - b.losses) - (a.wins - a.losses))
+    .slice(0, 10);
+}
+
 // ── Socket ─────────────────────────────────────────────────────────────────
 
 io.on('connection', (socket) => {
@@ -41,8 +60,9 @@ io.on('connection', (socket) => {
   let myPlayer  = null;
 
   // ── Créer une room ──────────────────────────────────────────────────────
-  socket.on('create-room', ({ gameType = 'connect4' } = {}) => {
+  socket.on('create-room', ({ gameType = 'connect4', name = '' } = {}) => {
     if (!VALID_GAMES.has(gameType)) return;
+    const playerName = String(name).trim().slice(0, 20) || 'Anonyme';
 
     const code = generateCode();
     rooms.set(code, {
@@ -50,6 +70,7 @@ io.on('connection', (socket) => {
       gameType,
       state: createInitialState(gameType),
       players: { R: socket.id, Y: null },
+      playerNames: { R: playerName, Y: null },
       status: 'waiting',
       winner: null,
       restartVotes: new Set(),
@@ -63,15 +84,17 @@ io.on('connection', (socket) => {
   });
 
   // ── Rejoindre une room ──────────────────────────────────────────────────
-  socket.on('join-room', ({ code }) => {
+  socket.on('join-room', ({ code, name = '' }) => {
+    const playerName = String(name).trim().slice(0, 20) || 'Anonyme';
     const key  = (code || '').toUpperCase().trim();
     const room = rooms.get(key);
 
     if (!room)          { socket.emit('error', { message: 'Room introuvable. Vérifie le code.' }); return; }
     if (room.players.Y) { socket.emit('error', { message: 'Cette room est déjà pleine.' });        return; }
 
-    room.players.Y = socket.id;
-    room.status    = 'playing';
+    room.players.Y    = socket.id;
+    room.playerNames.Y = playerName;
+    room.status       = 'playing';
     roomCode = key;
     myPlayer = 'Y';
     socket.join(key);
@@ -171,6 +194,18 @@ io.on('connection', (socket) => {
     room.winner = winner;
 
     io.to(roomCode).emit('game-update', { gameType: room.gameType, state: newState, status, winner });
+
+    if (status !== 'playing') {
+      if (status === 'won') {
+        const loserRole = winner === 'R' ? 'Y' : 'R';
+        updateLeaderboard(room.playerNames[winner], 'win');
+        updateLeaderboard(room.playerNames[loserRole], 'loss');
+      } else {
+        updateLeaderboard(room.playerNames.R, 'draw');
+        updateLeaderboard(room.playerNames.Y, 'draw');
+      }
+      io.emit('leaderboard-update', getLeaderboardData());
+    }
   });
 
   // ── Coups légaux (échecs uniquement) ────────────────────────────────────
@@ -209,6 +244,11 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── Classement ───────────────────────────────────────────────────────────
+  socket.on('get-leaderboard', () => {
+    socket.emit('leaderboard-update', getLeaderboardData());
+  });
+
   // ── Quitter la room (retour menu) ───────────────────────────────────────
   socket.on('leave-room', () => {
     const room = rooms.get(roomCode);
@@ -235,8 +275,7 @@ io.on('connection', (socket) => {
     if (!room || !room.players.Y) return;
     const clean = String(text || '').trim().slice(0, 200);
     if (!clean) return;
-    const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    io.to(roomCode).emit('new-message', { player: myPlayer, text: clean, time });
+    io.to(roomCode).emit('new-message', { player: myPlayer, text: clean, timestamp: Date.now() });
   });
 
   // ── Déconnexion ──────────────────────────────────────────────────────────

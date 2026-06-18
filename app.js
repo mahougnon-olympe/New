@@ -39,6 +39,13 @@ const PLAYER_NAMES = {
   chess:     { R: 'Blancs',  Y: 'Noirs'  },
 };
 
+// ── Pseudo ────────────────────────────────────────────────────────────────────
+$('input-name').value = localStorage.getItem('playerName') || '';
+$('input-name').addEventListener('input', e => {
+  localStorage.setItem('playerName', e.target.value.trim());
+});
+function getPlayerName() { return ($('input-name').value.trim()) || ''; }
+
 // ── Sélecteur de jeu (accueil) ───────────────────────────────────────────────
 document.querySelectorAll('.game-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -51,7 +58,7 @@ document.querySelectorAll('.game-btn').forEach(btn => {
 // ── Accueil ──────────────────────────────────────────────────────────────────
 $('btn-create').addEventListener('click', () => {
   clearError();
-  socket.emit('create-room', { gameType: selectedGameType });
+  socket.emit('create-room', { gameType: selectedGameType, name: getPlayerName() });
 });
 
 $('btn-join').addEventListener('click', joinRoom);
@@ -63,7 +70,7 @@ function joinRoom() {
   if (code.length !== 4) { showError('Entre un code à 4 lettres.'); return; }
   clearError();
   currentRoomCode = code;
-  socket.emit('join-room', { code });
+  socket.emit('join-room', { code, name: getPlayerName() });
 }
 
 function showError(msg) { const e = $('error-msg'); e.textContent = msg; e.classList.remove('hidden'); }
@@ -551,7 +558,8 @@ $('chat-form').addEventListener('submit', e => {
   input.value = '';
 });
 
-function appendMessage({ player, text, time }) {
+function appendMessage({ player, text, timestamp }) {
+  const time = new Date(timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const mine = player === myPlayer;
   const msg  = document.createElement('div');
   msg.className = `msg ${mine ? 'msg-mine' : 'msg-theirs'}`;
@@ -577,6 +585,28 @@ function clearChat() {
   $('chat-input').value = '';
 }
 
+// ── Classement ────────────────────────────────────────────────────────────────
+function renderLeaderboard(data) {
+  const list = $('leaderboard-list');
+  if (!data || data.length === 0) {
+    list.innerHTML = '<p class="lb-empty">Aucune partie jouée pour l\'instant.</p>';
+    return;
+  }
+  const medals = ['🥇', '🥈', '🥉'];
+  const classes = ['gold', 'silver', 'bronze'];
+  list.innerHTML = data.map((entry, i) => `
+    <div class="lb-row">
+      <span class="lb-rank ${classes[i] || ''}">${medals[i] || i + 1}</span>
+      <span class="lb-name">${entry.name}</span>
+      <div class="lb-stats">
+        <span class="lb-w">${entry.wins}V</span>
+        <span class="lb-l">${entry.losses}D</span>
+        <span class="lb-d">${entry.draws}N</span>
+      </div>
+    </div>
+  `).join('');
+}
+
 // ── Overlay déconnexion ───────────────────────────────────────────────────────
 function showReconnectingOverlay() {
   $('dc-icon').textContent  = '⏳';
@@ -599,8 +629,9 @@ $('btn-menu').addEventListener('click', goToHome);
 
 // ── Événements Socket.IO ──────────────────────────────────────────────────────
 
-// Reconnexion automatique après reload
+// Reconnexion automatique après reload + chargement du classement
 socket.on('connect', () => {
+  socket.emit('get-leaderboard');
   const saved = sessionStorage.getItem('p4session');
   if (!saved) return;
   try {
@@ -684,7 +715,8 @@ socket.on('restart-requested', () => {
   }
 });
 
-socket.on('new-message', (msg) => { appendMessage(msg); });
+socket.on('new-message',       (msg)  => { appendMessage(msg); });
+socket.on('leaderboard-update', (data) => { renderLeaderboard(data); });
 
 socket.on('error', ({ message }) => { showError(message); });
 socket.on('connect_error', () => { showError('Impossible de joindre le serveur. Réessaie.'); });

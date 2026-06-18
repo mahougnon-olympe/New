@@ -136,6 +136,20 @@ h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; color: var(--boa
 }
 #input-code:focus { outline: none; border-color: var(--board); }
 
+/* ── Name input ── */
+#input-name {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: .95rem;
+  color: var(--text);
+  background: var(--bg);
+  transition: border-color .2s;
+}
+#input-name:focus { outline: none; border-color: var(--board); }
+#input-name::placeholder { color: #94a3b8; }
+
 /* ── Error ── */
 .error-msg { color: var(--red); font-size: .875rem; text-align: center; font-weight: 500; }
 
@@ -454,6 +468,53 @@ h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; color: var(--boa
 }
 .promo-btn:hover { border-color: var(--board); background: #e8eeff; }
 .promo-btn span  { font-size: .6rem; color: var(--muted); }
+
+/* ── Leaderboard ── */
+.lb-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 20px;
+  width: 100%;
+  max-width: 380px;
+}
+.lb-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 1rem;
+}
+.lb-title { font-weight: 700; font-size: .9rem; }
+.lb-empty { font-size: .8rem; color: var(--muted); text-align: center; padding: 6px 0; }
+
+.lb-row {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid #f0f4ff;
+  font-size: .85rem;
+}
+.lb-row:last-child { border-bottom: none; }
+
+.lb-rank { font-weight: 700; text-align: center; font-size: .8rem; color: var(--muted); }
+.lb-rank.gold   { color: #f59e0b; font-size: 1rem; }
+.lb-rank.silver { color: #94a3b8; font-size: 1rem; }
+.lb-rank.bronze { color: #b45309; font-size: 1rem; }
+
+.lb-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .88rem;
+}
+.lb-stats { display: flex; gap: 6px; font-size: .75rem; white-space: nowrap; }
+.lb-w { color: #16a34a; font-weight: 700; }
+.lb-l { color: var(--red); }
+.lb-d { color: var(--muted); }
 
 /* ── Utilities ── */
 .hidden { display: none !important; }
