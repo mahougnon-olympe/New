@@ -1122,3 +1122,28 @@ socket.on('leaderboard-update', (data) => { renderLeaderboard(data); });
 
 socket.on('error', ({ message }) => { showError(message); });
 socket.on('connect_error', () => { showError('Impossible de joindre le serveur. Réessaie.'); });
+
+// ── Particules ─────────────────────────────────────────────────────────────────
+function spawnParticles(x, y) {
+  const palette = ['#6366f1','#818cf8','#a5b4fc','#c7d2fe','#60a5fa','#e879f9','#38bdf8'];
+  const count = 16;
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    const size = 3 + Math.random() * 5;
+    p.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:${size}px;height:${size}px;border-radius:50%;background:${palette[i % palette.length]};pointer-events:none;z-index:9999;`;
+    document.body.appendChild(p);
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.4;
+    const dist  = 32 + Math.random() * 68;
+    const tx    = Math.cos(angle) * dist;
+    const ty    = Math.sin(angle) * dist;
+    p.animate([
+      { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+      { transform: `translate(calc(-50% + ${tx}px),calc(-50% + ${ty}px)) scale(0)`, opacity: 0 },
+    ], { duration: 420 + Math.random() * 360, easing: 'cubic-bezier(0,.9,.57,1)', fill: 'forwards' })
+    .onfinish = () => p.remove();
+  }
+}
+
+document.addEventListener('click', e => {
+  if (e.target.closest('.btn-primary, .landing-card')) spawnParticles(e.clientX, e.clientY);
+}, { passive: true });
