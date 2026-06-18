@@ -537,6 +537,13 @@ h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; color: var(--boa
 .btn-help-float:hover  { box-shadow: 0 6px 18px rgba(26,86,219,.55); }
 .btn-help-float:active { transform: scale(.92); }
 
+/* Sur mobile, remonter le bouton au-dessus du formulaire de chat */
+@media (max-width: 600px) {
+  .screen.game-screen.active ~ .btn-help-float {
+    bottom: 92px;
+  }
+}
+
 /* ── Modale aide ── */
 .help-modal {
   background: var(--card);
