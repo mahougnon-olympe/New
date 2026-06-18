@@ -1,19 +1,33 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const connect4 = require('./game');
-const tictactoe = require('./game-tictactoe');
-const chessGame = require('./game-chess');
+const connect4   = require('./game');
+const tictactoe  = require('./game-tictactoe');
+const chessGame  = require('./game-chess');
+const triviaGame = require('./game-trivia');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-const rooms      = new Map();
-const leaderboard = new Map(); // name -> { wins, losses, draws }
-const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const rooms           = new Map();
+const leaderboard     = new Map();
+const triviaRooms     = new Map();
+const triviaLeaderboard = new Map();
+
+const CODE_CHARS   = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const RECONNECT_MS = 30_000;
-const VALID_GAMES = new Set(['connect4', 'tictactoe', 'chess']);
+const VALID_GAMES  = new Set(['connect4', 'tictactoe', 'chess']);
+
+const TRIVIA_CATEGORIES = {
+  9: 'Culture Générale', 23: 'Histoire',       22: 'Géographie',
+  17: 'Sciences',        21: 'Sports',          11: 'Cinéma',
+  12: 'Musique',         14: 'Télévision',      19: 'Mathématiques',
+  20: 'Informatique',    25: 'Arts',            27: 'Animaux',
+};
+const TRIVIA_COLORS = ['#2563eb','#dc2626','#16a34a','#9333ea','#ea580c','#0891b2'];
+const TRIVIA_Q_COUNT = 10;
+const TRIVIA_TIME_MS = 20_000;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -53,11 +67,129 @@ function getLeaderboardData() {
     .slice(0, 10);
 }
 
+// ── Trivia leaderboard helpers ─────────────────────────────────────────────
+
+function updateTriviaLeaderboard(name, result) {
+  if (!name) return;
+  const e = triviaLeaderboard.get(name) || { wins: 0, losses: 0, draws: 0 };
+  if (result === 'win')  e.wins++;
+  if (result === 'loss') e.losses++;
+  if (result === 'draw') e.draws++;
+  triviaLeaderboard.set(name, e);
+}
+
+function getTriviaLeaderboardData() {
+  return [...triviaLeaderboard.entries()]
+    .map(([name, s]) => ({ name, wins: s.wins, losses: s.losses, draws: s.draws }))
+    .sort((a, b) => b.wins - a.wins)
+    .slice(0, 10);
+}
+
+// ── Trivia room helpers ────────────────────────────────────────────────────
+
+function getTriviaRoomState(room) {
+  return {
+    code:         room.code,
+    hostId:       room.hostId,
+    categoryName: room.categoryName,
+    status:       room.status,
+    players: [...room.players.entries()].map(([sid, p]) => ({
+      socketId: sid, name: p.name, colorIndex: p.colorIndex, score: p.score,
+    })),
+  };
+}
+
+function getRoomScores(room) {
+  return [...room.players.entries()]
+    .map(([sid, p]) => ({ socketId: sid, name: p.name, score: p.score, colorIndex: p.colorIndex }))
+    .sort((a, b) => b.score - a.score);
+}
+
+async function startTriviaGame(code) {
+  const room = triviaRooms.get(code);
+  if (!room) return;
+  try {
+    room.questions = await triviaGame.fetchQuestions(room.category, room.totalQ);
+  } catch {
+    io.to(code).emit('trivia-error', { message: 'Impossible de charger les questions. Réessaie.' });
+    room.status = 'waiting';
+    return;
+  }
+  room.status   = 'question';
+  room.currentQ = 0;
+  io.to(code).emit('trivia-start', { totalQuestions: room.totalQ, categoryName: room.categoryName });
+  sendTriviaQuestion(code);
+}
+
+function sendTriviaQuestion(code) {
+  const room = triviaRooms.get(code);
+  if (!room) return;
+  const q = room.questions[room.currentQ];
+  room.answersThisRound = new Map();
+  room.status = 'question';
+  io.to(code).emit('trivia-question', {
+    questionNum:    room.currentQ + 1,
+    totalQuestions: room.totalQ,
+    question:       q.question,
+    choices:        q.choices,
+    timeLimit:      20,
+    scores:         getRoomScores(room),
+  });
+  room.timer = setTimeout(() => revealTriviaAnswer(code), TRIVIA_TIME_MS);
+}
+
+function revealTriviaAnswer(code) {
+  const room = triviaRooms.get(code);
+  if (!room || room.status !== 'question') return;
+  clearTimeout(room.timer);
+  room.timer  = null;
+  room.status = 'reveal';
+
+  const correct = room.questions[room.currentQ].correct;
+  const correctSocketIds = [];
+  for (const [sid, choice] of room.answersThisRound) {
+    if (choice === correct) {
+      const p = room.players.get(sid);
+      if (p) { p.score++; correctSocketIds.push(sid); }
+    }
+  }
+  io.to(code).emit('trivia-reveal', { correct, correctSocketIds, scores: getRoomScores(room) });
+  room.revealTimer = setTimeout(() => nextTriviaQuestion(code), 3500);
+}
+
+function nextTriviaQuestion(code) {
+  const room = triviaRooms.get(code);
+  if (!room) return;
+  room.currentQ++;
+  if (room.currentQ >= room.totalQ) finishTriviaGame(code);
+  else sendTriviaQuestion(code);
+}
+
+function finishTriviaGame(code) {
+  const room = triviaRooms.get(code);
+  if (!room) return;
+  room.status = 'finished';
+  const scores = getRoomScores(room);
+
+  if (room.players.size >= 2) {
+    const maxScore = scores[0].score;
+    const isAllTied = scores.every(s => s.score === maxScore);
+    for (const s of scores) {
+      updateTriviaLeaderboard(s.name, isAllTied ? 'draw' : s.score === maxScore ? 'win' : 'loss');
+    }
+    io.emit('trivia-leaderboard-update', getTriviaLeaderboardData());
+  }
+
+  io.to(code).emit('trivia-finished', { scores });
+  setTimeout(() => triviaRooms.delete(code), 60_000);
+}
+
 // ── Socket ─────────────────────────────────────────────────────────────────
 
 io.on('connection', (socket) => {
-  let roomCode  = null;
-  let myPlayer  = null;
+  let roomCode      = null;
+  let myPlayer      = null;
+  let triviaRoomCode = null;
 
   // ── Créer une room ──────────────────────────────────────────────────────
   socket.on('create-room', ({ gameType = 'connect4', name = '' } = {}) => {
@@ -269,6 +401,89 @@ io.on('connection', (socket) => {
     myPlayer = null;
   });
 
+  // ── Trivia : créer un salon ──────────────────────────────────────────────
+  socket.on('create-trivia-room', ({ category, name = '' } = {}) => {
+    const cat = parseInt(category);
+    if (!TRIVIA_CATEGORIES[cat]) return;
+    const playerName = String(name).trim().slice(0, 20) || 'Anonyme';
+    const code = generateCode();
+    const players = new Map();
+    players.set(socket.id, { name: playerName, colorIndex: 0, score: 0 });
+    triviaRooms.set(code, {
+      code, hostId: socket.id, category: cat,
+      categoryName: TRIVIA_CATEGORIES[cat],
+      players, questions: null, currentQ: -1,
+      status: 'waiting', answersThisRound: new Map(),
+      timer: null, revealTimer: null, totalQ: TRIVIA_Q_COUNT,
+    });
+    triviaRoomCode = code;
+    socket.join(code);
+    socket.emit('trivia-room-created', { code, categoryName: TRIVIA_CATEGORIES[cat], roomState: getTriviaRoomState(triviaRooms.get(code)) });
+  });
+
+  // ── Trivia : rejoindre ───────────────────────────────────────────────────
+  socket.on('join-trivia-room', ({ code, name = '' } = {}) => {
+    const key  = (code || '').toUpperCase().trim();
+    const room = triviaRooms.get(key);
+    const playerName = String(name).trim().slice(0, 20) || 'Anonyme';
+    if (!room)                   { socket.emit('trivia-error', { message: 'Salon introuvable. Vérifie le code.' }); return; }
+    if (room.status !== 'waiting') { socket.emit('trivia-error', { message: 'La partie a déjà commencé.' });        return; }
+    if (room.players.size >= 6)  { socket.emit('trivia-error', { message: 'Le salon est complet (6 joueurs max).' }); return; }
+    const colorIndex = room.players.size;
+    room.players.set(socket.id, { name: playerName, colorIndex, score: 0 });
+    triviaRoomCode = key;
+    socket.join(key);
+    socket.emit('trivia-room-joined', { code: key, categoryName: room.categoryName });
+    io.to(key).emit('trivia-room-updated', getTriviaRoomState(room));
+  });
+
+  // ── Trivia : démarrer ────────────────────────────────────────────────────
+  socket.on('start-trivia', () => {
+    const room = triviaRooms.get(triviaRoomCode);
+    if (!room || room.hostId !== socket.id || room.status !== 'waiting') return;
+    room.status = 'loading';
+    startTriviaGame(triviaRoomCode);
+  });
+
+  // ── Trivia : répondre ────────────────────────────────────────────────────
+  socket.on('trivia-answer', ({ choice } = {}) => {
+    const room = triviaRooms.get(triviaRoomCode);
+    if (!room || room.status !== 'question') return;
+    if (room.answersThisRound.has(socket.id)) return;
+    if (!room.players.has(socket.id)) return;
+    room.answersThisRound.set(socket.id, String(choice));
+    io.to(triviaRoomCode).emit('trivia-player-answered', { socketId: socket.id });
+    const connectedIds = [...room.players.keys()].filter(sid => io.sockets.sockets.get(sid)?.connected);
+    if (connectedIds.every(sid => room.answersThisRound.has(sid))) {
+      clearTimeout(room.timer);
+      revealTriviaAnswer(triviaRoomCode);
+    }
+  });
+
+  // ── Trivia : quitter ─────────────────────────────────────────────────────
+  socket.on('leave-trivia-room', () => {
+    if (!triviaRoomCode) return;
+    const room = triviaRooms.get(triviaRoomCode);
+    if (room) {
+      room.players.delete(socket.id);
+      clearTimeout(room.timer);
+      clearTimeout(room.revealTimer);
+      if (room.players.size === 0) {
+        triviaRooms.delete(triviaRoomCode);
+      } else {
+        if (room.hostId === socket.id) room.hostId = [...room.players.keys()][0];
+        socket.leave(triviaRoomCode);
+        io.to(triviaRoomCode).emit('trivia-room-updated', getTriviaRoomState(room));
+      }
+    }
+    triviaRoomCode = null;
+  });
+
+  // ── Trivia : classement ──────────────────────────────────────────────────
+  socket.on('get-trivia-leaderboard', () => {
+    socket.emit('trivia-leaderboard-update', getTriviaLeaderboardData());
+  });
+
   // ── Chat ─────────────────────────────────────────────────────────────────
   socket.on('send-message', ({ text }) => {
     const room = rooms.get(roomCode);
@@ -297,6 +512,30 @@ io.on('connection', (socket) => {
       if (room.players[other]) io.to(room.players[other]).emit('player-disconnected');
       rooms.delete(roomCode);
     }, RECONNECT_MS);
+
+    // Déconnexion d'un salon trivia
+    if (triviaRoomCode) {
+      const troom = triviaRooms.get(triviaRoomCode);
+      if (troom) {
+        troom.players.delete(socket.id);
+        if (troom.players.size === 0) {
+          clearTimeout(troom.timer);
+          clearTimeout(troom.revealTimer);
+          triviaRooms.delete(triviaRoomCode);
+        } else {
+          if (troom.hostId === socket.id) troom.hostId = [...troom.players.keys()][0];
+          if (troom.status === 'waiting') {
+            io.to(triviaRoomCode).emit('trivia-room-updated', getTriviaRoomState(troom));
+          } else if (troom.status === 'question') {
+            const connectedIds = [...troom.players.keys()].filter(sid => io.sockets.sockets.get(sid)?.connected);
+            if (connectedIds.length > 0 && connectedIds.every(sid => troom.answersThisRound.has(sid))) {
+              clearTimeout(troom.timer);
+              revealTriviaAnswer(triviaRoomCode);
+            }
+          }
+        }
+      }
+    }
   });
 });
 
@@ -308,8 +547,10 @@ app.get('/admin/reset', (req, res) => {
     return res.status(401).json({ error: 'Clé invalide.' });
   }
   leaderboard.clear();
+  triviaLeaderboard.clear();
   io.emit('leaderboard-update', []);
-  res.json({ ok: true, message: 'Classement réinitialisé.' });
+  io.emit('trivia-leaderboard-update', []);
+  res.json({ ok: true, message: 'Classements réinitialisés.' });
 });
 
 const PORT = process.env.PORT || 3001;

@@ -8,8 +8,29 @@
 </head>
 <body>
 
-  <!-- ── Écran 1 : Accueil ── -->
-  <div id="screen-home" class="screen active">
+  <!-- ── Écran 0 : Landing ── -->
+  <div id="screen-landing" class="screen active">
+    <div class="logo">
+      <h1>Jeux Multijoueur</h1>
+      <p class="subtitle">Choisissez votre catégorie</p>
+    </div>
+    <div class="landing-grid">
+      <button class="landing-card" id="btn-go-classic">
+        <span class="landing-icon">🎮</span>
+        <h2>Jeux Classiques</h2>
+        <p>Puissance 4 · Morpion · Échecs</p>
+      </button>
+      <button class="landing-card" id="btn-go-trivia">
+        <span class="landing-icon">🧠</span>
+        <h2>Culture Générale</h2>
+        <p>Quiz par thèmes · Solo &amp; Multi</p>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Écran 1 : Accueil Classique ── -->
+  <div id="screen-home" class="screen">
+    <button class="btn-back" id="btn-back-classic">← Retour</button>
     <div class="logo">
       <h1>Jeux Multijoueur</h1>
       <p class="subtitle">2 joueurs • Temps réel</p>
@@ -144,6 +165,73 @@
     <div class="overlay-box">
       <h3>Promouvoir le pion</h3>
       <div id="promo-choices" class="promo-choices"></div>
+    </div>
+  </div>
+
+  <!-- ── Écran 4 : Culture Générale (accueil) ── -->
+  <div id="screen-trivia-home" class="screen">
+    <button class="btn-back" id="btn-back-trivia-home">← Retour</button>
+    <div class="logo">
+      <h1>🧠 Culture Générale</h1>
+      <p class="subtitle">Choisis un thème et joue !</p>
+    </div>
+    <div class="card">
+      <input id="input-trivia-name" type="text" placeholder="Ton pseudo (optionnel)"
+        maxlength="20" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <p class="trivia-theme-label">Thème :</p>
+      <div id="trivia-themes" class="trivia-themes"></div>
+      <div class="trivia-action-row">
+        <button id="btn-solo-trivia" class="btn btn-primary">▶ Solo</button>
+        <button id="btn-create-trivia" class="btn btn-secondary">+ Créer un salon</button>
+      </div>
+      <div class="join-group">
+        <input id="input-trivia-code" type="text" placeholder="Code à 4 lettres"
+          maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" />
+        <button id="btn-join-trivia" class="btn btn-secondary">Rejoindre</button>
+      </div>
+      <p id="trivia-error-msg" class="error-msg hidden"></p>
+    </div>
+    <div class="lb-card">
+      <div class="lb-header"><span>🏆</span><span class="lb-title">Classement Quiz</span></div>
+      <div id="trivia-lb-list" class="lb-list"><p class="lb-empty">Aucune partie jouée pour l'instant.</p></div>
+    </div>
+  </div>
+
+  <!-- ── Écran 5 : Salon trivia (attente) ── -->
+  <div id="screen-trivia-waiting" class="screen">
+    <div class="card waiting-card">
+      <div class="spinner"></div>
+      <p id="trivia-wait-theme" class="waiting-game-name"></p>
+      <h2>En attente de joueurs…</h2>
+      <p>Code du salon :</p>
+      <div id="trivia-room-code" class="code-display"></div>
+      <button id="btn-trivia-copy" class="btn btn-secondary">Copier le code</button>
+      <div id="trivia-wait-players" class="trivia-wait-players"></div>
+      <button id="btn-start-trivia" class="btn btn-primary hidden">▶ Démarrer la partie</button>
+      <button id="btn-leave-trivia-wait" class="btn btn-secondary">Quitter le salon</button>
+      <p class="hint">1 à 6 joueurs. Démarre dès que tu es prêt·e.</p>
+    </div>
+  </div>
+
+  <!-- ── Écran 6 : Trivia en cours ── -->
+  <div id="screen-trivia-game" class="screen game-screen">
+    <div class="tg-wrap">
+      <div class="tg-header">
+        <span id="tg-q-num" class="tg-q-num"></span>
+        <span id="tg-theme-label" class="tg-theme-lbl"></span>
+        <div id="tg-timer" class="tg-timer">20</div>
+      </div>
+      <div id="tg-scores" class="tg-scores"></div>
+      <div class="tg-question-box">
+        <p id="tg-question" class="tg-question"></p>
+      </div>
+      <div id="tg-choices" class="tg-choices"></div>
+      <div id="tg-reveal" class="tg-reveal hidden"></div>
+      <div id="tg-finished" class="tg-finished hidden">
+        <h2 class="tg-finished-title">Résultats finaux</h2>
+        <div id="tg-final-scores" class="tg-final-scores"></div>
+        <button id="btn-leave-trivia-game" class="btn btn-primary">Retour au menu</button>
+      </div>
     </div>
   </div>
 

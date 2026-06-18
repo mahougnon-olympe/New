@@ -15,16 +15,46 @@ let pendingPromoMove = null;
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
-const screens = { home: $('screen-home'), waiting: $('screen-waiting'), game: $('screen-game') };
 
 // ── Socket ───────────────────────────────────────────────────────────────────
 const socket = io(window.BACKEND_URL, { transports: ['websocket', 'polling'] });
 
 // ── Navigation ───────────────────────────────────────────────────────────────
 function showScreen(name) {
-  Object.values(screens).forEach(s => s.classList.remove('active'));
-  screens[name].classList.add('active');
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('screen-' + name);
+  if (el) el.classList.add('active');
 }
+
+// ── Trivia : constantes ───────────────────────────────────────────────────────
+const TRIVIA_CATS = [
+  { id: 9,  name: 'Culture G.', icon: '🧠' },
+  { id: 23, name: 'Histoire',   icon: '📜' },
+  { id: 22, name: 'Géographie', icon: '🌍' },
+  { id: 17, name: 'Sciences',   icon: '🔬' },
+  { id: 21, name: 'Sports',     icon: '⚽' },
+  { id: 11, name: 'Cinéma',     icon: '🎬' },
+  { id: 12, name: 'Musique',    icon: '🎵' },
+  { id: 14, name: 'Télévision', icon: '📺' },
+  { id: 19, name: 'Maths',      icon: '🔢' },
+  { id: 20, name: 'Info',       icon: '💻' },
+  { id: 25, name: 'Arts',       icon: '🎨' },
+  { id: 27, name: 'Animaux',    icon: '🐾' },
+];
+const TRIVIA_COLORS = ['#2563eb','#dc2626','#16a34a','#9333ea','#ea580c','#0891b2'];
+
+// ── Trivia : état ─────────────────────────────────────────────────────────────
+let selectedTriviaCategory = null;
+let triviaRoomCode         = null;
+let triviaIsHost           = false;
+let triviaIsSolo           = false;
+let triviaAnsweredThis     = false;
+let triviaChoiceSelected   = null;
+let triviaTimerInterval    = null;
+let triviaQuestions        = [];
+let triviaCurrentQ         = 0;
+let triviaScore            = 0;
+let triviaMySocketId       = null;
 
 // ── Données par type de jeu ──────────────────────────────────────────────────
 const GAME_NAMES  = { connect4: 'Puissance 4', tictactoe: 'Tic Tac Toe', chess: 'Échecs' };
@@ -38,6 +68,11 @@ const PLAYER_NAMES = {
   tictactoe: { R: 'Croix',   Y: 'Rond'   },
   chess:     { R: 'Blancs',  Y: 'Noirs'  },
 };
+
+// ── Landing ───────────────────────────────────────────────────────────────────
+$('btn-go-classic').addEventListener('click', () => showScreen('home'));
+$('btn-go-trivia').addEventListener('click',  () => { buildTriviaThemes(); showScreen('trivia-home'); socket.emit('get-trivia-leaderboard'); });
+$('btn-back-classic').addEventListener('click', () => showScreen('landing'));
 
 // ── Pseudo ────────────────────────────────────────────────────────────────────
 $('input-name').value = localStorage.getItem('playerName') || '';
@@ -607,6 +642,274 @@ function renderLeaderboard(data) {
   `).join('');
 }
 
+// ── Trivia : utilitaires ──────────────────────────────────────────────────────
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getTriviaName() { return ($('input-trivia-name').value.trim()) || ''; }
+
+function showTriviaError(msg) { const e = $('trivia-error-msg'); e.textContent = msg; e.classList.remove('hidden'); }
+function clearTriviaError()   { $('trivia-error-msg').classList.add('hidden'); }
+
+function goToTriviaHome() {
+  if (triviaRoomCode) socket.emit('leave-trivia-room');
+  stopTriviaTimer();
+  triviaRoomCode = null; triviaIsHost = false; triviaIsSolo = false;
+  triviaAnsweredThis = false; triviaChoiceSelected = null;
+  triviaQuestions = []; triviaCurrentQ = 0; triviaScore = 0;
+  $('tg-choices').innerHTML = '';
+  $('tg-reveal').classList.add('hidden');
+  $('tg-finished').classList.add('hidden');
+  clearTriviaError();
+  showScreen('trivia-home');
+}
+
+// ── Trivia : thèmes ───────────────────────────────────────────────────────────
+function buildTriviaThemes() {
+  const container = $('trivia-themes');
+  if (container.childElementCount > 0) return;
+  container.innerHTML = TRIVIA_CATS.map(c => `
+    <button class="theme-btn" data-id="${c.id}">
+      <span>${c.icon}</span>
+      <span>${c.name}</span>
+    </button>
+  `).join('');
+  container.querySelectorAll('.theme-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedTriviaCategory = parseInt(btn.dataset.id);
+      clearTriviaError();
+    });
+  });
+}
+
+// Pseudo trivia sync avec classique
+$('input-trivia-name').value = localStorage.getItem('playerName') || '';
+$('input-trivia-name').addEventListener('input', e => {
+  localStorage.setItem('playerName', e.target.value.trim());
+});
+
+// Boutons trivia home
+$('btn-back-trivia-home').addEventListener('click', () => { clearTriviaError(); showScreen('landing'); });
+
+$('btn-solo-trivia').addEventListener('click', async () => {
+  if (!selectedTriviaCategory) { showTriviaError('Choisis un thème pour commencer.'); return; }
+  clearTriviaError();
+  $('btn-solo-trivia').disabled = true;
+  $('btn-solo-trivia').textContent = '⏳ Chargement…';
+  try {
+    const url = `https://opentdb.com/api.php?amount=10&category=${selectedTriviaCategory}&type=multiple&encode=url3986`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    if (data.response_code !== 0) throw new Error('code:' + data.response_code);
+    triviaQuestions = data.results.map(q => ({
+      question: decodeURIComponent(q.question),
+      choices:  shuffle([...q.incorrect_answers, q.correct_answer].map(decodeURIComponent)),
+      correct:  decodeURIComponent(q.correct_answer),
+    }));
+  } catch {
+    showTriviaError('Impossible de charger les questions. Vérifie ta connexion.');
+    $('btn-solo-trivia').disabled = false;
+    $('btn-solo-trivia').textContent = '▶ Solo';
+    return;
+  }
+  $('btn-solo-trivia').disabled = false;
+  $('btn-solo-trivia').textContent = '▶ Solo';
+  const cat = TRIVIA_CATS.find(c => c.id === selectedTriviaCategory);
+  triviaIsSolo = true; triviaCurrentQ = 0; triviaScore = 0; triviaRoomCode = null;
+  $('tg-theme-label').textContent = cat ? `${cat.icon} ${cat.name}` : '';
+  $('tg-scores').innerHTML = '';
+  $('tg-finished').classList.add('hidden');
+  showScreen('trivia-game');
+  soloNextQuestion();
+});
+
+$('btn-create-trivia').addEventListener('click', () => {
+  if (!selectedTriviaCategory) { showTriviaError('Choisis un thème pour commencer.'); return; }
+  clearTriviaError();
+  socket.emit('create-trivia-room', { category: selectedTriviaCategory, name: getTriviaName() });
+});
+
+$('btn-join-trivia').addEventListener('click',  joinTriviaRoom);
+$('input-trivia-code').addEventListener('keydown', e => { if (e.key === 'Enter') joinTriviaRoom(); });
+$('input-trivia-code').addEventListener('input',   e => { e.target.value = e.target.value.toUpperCase(); });
+
+function joinTriviaRoom() {
+  const code = $('input-trivia-code').value.trim().toUpperCase();
+  if (code.length !== 4) { showTriviaError('Entre un code à 4 lettres.'); return; }
+  clearTriviaError();
+  socket.emit('join-trivia-room', { code, name: getTriviaName() });
+}
+
+// ── Trivia : salle d'attente ──────────────────────────────────────────────────
+$('btn-trivia-copy').addEventListener('click', () => {
+  navigator.clipboard.writeText($('trivia-room-code').textContent).then(() => {
+    $('btn-trivia-copy').textContent = 'Copié !';
+    setTimeout(() => { $('btn-trivia-copy').textContent = 'Copier le code'; }, 2000);
+  });
+});
+$('btn-start-trivia').addEventListener('click', () => { socket.emit('start-trivia'); });
+$('btn-leave-trivia-wait').addEventListener('click', goToTriviaHome);
+
+function renderTriviaWaitPlayers(players, hostId) {
+  $('trivia-wait-players').innerHTML = players.map(p => `
+    <div class="tw-chip" style="background:${TRIVIA_COLORS[p.colorIndex] || '#64748b'}">
+      <div class="tw-chip-dot"></div>
+      <span>${p.name}${p.socketId === hostId ? ' 👑' : ''}</span>
+    </div>
+  `).join('');
+  const isHost = players.some(p => p.socketId === triviaMySocketId && p.socketId === hostId);
+  $('btn-start-trivia').classList.toggle('hidden', !isHost);
+}
+
+// ── Trivia : timer ────────────────────────────────────────────────────────────
+function startTriviaTimer(seconds, onExpire) {
+  stopTriviaTimer();
+  let rem = seconds;
+  $('tg-timer').textContent = rem;
+  $('tg-timer').classList.remove('warning');
+  triviaTimerInterval = setInterval(() => {
+    rem--;
+    $('tg-timer').textContent = rem;
+    $('tg-timer').classList.toggle('warning', rem <= 5);
+    if (rem <= 0) { stopTriviaTimer(); onExpire(); }
+  }, 1000);
+}
+function stopTriviaTimer() {
+  if (triviaTimerInterval) { clearInterval(triviaTimerInterval); triviaTimerInterval = null; }
+}
+
+// ── Trivia : affichage question ───────────────────────────────────────────────
+const LETTERS = ['A','B','C','D'];
+
+function showTriviaQuestion({ questionNum, totalQuestions, question, choices, timeLimit, scores }) {
+  triviaAnsweredThis = false; triviaChoiceSelected = null;
+  $('tg-q-num').textContent = `Q ${questionNum} / ${totalQuestions}`;
+  $('tg-question').textContent = question;
+  $('tg-reveal').classList.add('hidden');
+  $('tg-finished').classList.add('hidden');
+  if (scores) renderTriviaScores(scores);
+
+  $('tg-choices').innerHTML = choices.map((c, i) => `
+    <button class="tg-choice" data-choice="${c.replace(/"/g,'&quot;')}">
+      <span class="tg-choice-letter">${LETTERS[i]}</span>
+      <span>${c}</span>
+    </button>
+  `).join('');
+  $('tg-choices').querySelectorAll('.tg-choice').forEach(btn => {
+    btn.addEventListener('click', () => onTriviaChoice(btn.dataset.choice, btn));
+  });
+  startTriviaTimer(timeLimit, () => onTriviaTimeUp());
+}
+
+function onTriviaChoice(choice, btn) {
+  if (triviaAnsweredThis) return;
+  triviaAnsweredThis = true; triviaChoiceSelected = choice;
+  $('tg-choices').querySelectorAll('.tg-choice').forEach(b => b.disabled = true);
+  btn.classList.add('wrong'); // will be corrected at reveal
+  if (triviaIsSolo) {
+    stopTriviaTimer();
+    soloReveal(choice);
+  } else {
+    socket.emit('trivia-answer', { choice });
+  }
+}
+
+function onTriviaTimeUp() {
+  if (triviaAnsweredThis) return;
+  triviaAnsweredThis = true;
+  $('tg-choices').querySelectorAll('.tg-choice').forEach(b => b.disabled = true);
+  if (triviaIsSolo) soloReveal(null);
+}
+
+function showTriviaReveal({ correct, correctSocketIds, scores, myChoice }) {
+  stopTriviaTimer();
+  $('tg-choices').querySelectorAll('.tg-choice').forEach(btn => {
+    const c = btn.dataset.choice;
+    btn.classList.remove('wrong');
+    if (c === correct) btn.classList.add('correct');
+    else if (c === myChoice) btn.classList.add('wrong');
+    else btn.classList.add('dimmed');
+  });
+  if (scores) renderTriviaScores(scores);
+  const gotIt = triviaIsSolo ? myChoice === correct
+    : (correctSocketIds || []).includes(triviaMySocketId);
+  $('tg-reveal').textContent  = gotIt ? '✅ Bonne réponse !' : `❌ La réponse était : ${correct}`;
+  $('tg-reveal').className    = `tg-reveal ${gotIt ? 'ok' : 'ko'}`;
+}
+
+function renderTriviaScores(scores) {
+  $('tg-scores').innerHTML = scores.map(s => `
+    <div class="tg-score-chip" style="background:${TRIVIA_COLORS[s.colorIndex] || '#64748b'}">
+      <span>${s.name}</span>
+      <span class="tg-score-check">${s.score}pt</span>
+    </div>
+  `).join('');
+}
+
+function showTriviaFinished(scores) {
+  stopTriviaTimer();
+  $('tg-choices').innerHTML = '';
+  $('tg-reveal').classList.add('hidden');
+  const medals = ['🥇','🥈','🥉'];
+  $('tg-final-scores').innerHTML = scores.map((s, i) => `
+    <div class="tg-final-row" style="background:${TRIVIA_COLORS[s.colorIndex] || '#64748b'}">
+      <span class="tg-final-rank">${medals[i] || (i+1)+'.'}</span>
+      <span class="tg-final-name">${s.name}</span>
+      <span class="tg-final-score">${s.score} / ${triviaQuestions.length || 10} pts</span>
+    </div>
+  `).join('');
+  $('tg-finished').classList.remove('hidden');
+}
+
+$('btn-leave-trivia-game').addEventListener('click', goToTriviaHome);
+
+// ── Trivia solo : logique locale ──────────────────────────────────────────────
+function soloNextQuestion() {
+  if (triviaCurrentQ >= triviaQuestions.length) {
+    const scores = [{ name: getTriviaName() || 'Toi', score: triviaScore, colorIndex: 0 }];
+    $('tg-q-num').textContent = '';
+    $('tg-timer').textContent = '–';
+    showTriviaFinished(scores);
+    return;
+  }
+  const q = triviaQuestions[triviaCurrentQ];
+  showTriviaQuestion({ questionNum: triviaCurrentQ + 1, totalQuestions: triviaQuestions.length, question: q.question, choices: q.choices, timeLimit: 20, scores: null });
+}
+
+function soloReveal(myChoice) {
+  const q = triviaQuestions[triviaCurrentQ];
+  if (myChoice === q.correct) triviaScore++;
+  showTriviaReveal({ correct: q.correct, correctSocketIds: [], scores: null, myChoice });
+  triviaCurrentQ++;
+  setTimeout(soloNextQuestion, 3000);
+}
+
+// ── Trivia : classement ───────────────────────────────────────────────────────
+function renderTriviaLeaderboard(data) {
+  const list = $('trivia-lb-list');
+  if (!data || data.length === 0) { list.innerHTML = '<p class="lb-empty">Aucune partie jouée pour l\'instant.</p>'; return; }
+  const medals = ['🥇','🥈','🥉'];
+  list.innerHTML = data.map((entry, i) => `
+    <div class="lb-row">
+      <span class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${medals[i] || i+1}</span>
+      <span class="lb-name">${entry.name}</span>
+      <div class="lb-stats">
+        <span class="lb-w">${entry.wins}V</span>
+        <span class="lb-l">${entry.losses}D</span>
+        <span class="lb-d">${entry.draws}N</span>
+      </div>
+    </div>
+  `).join('');
+}
+
 // ── Overlay déconnexion ───────────────────────────────────────────────────────
 function showReconnectingOverlay() {
   $('dc-icon').textContent  = '⏳';
@@ -652,9 +955,62 @@ $('btn-menu').addEventListener('click', goToHome);
 
 // ── Événements Socket.IO ──────────────────────────────────────────────────────
 
-// Reconnexion automatique après reload + chargement du classement
+// ── Socket Trivia ─────────────────────────────────────────────────────────────
+socket.on('trivia-room-created', ({ code, categoryName, roomState }) => {
+  triviaRoomCode = code; triviaIsHost = true;
+  $('trivia-room-code').textContent = code;
+  $('trivia-wait-theme').textContent = categoryName;
+  renderTriviaWaitPlayers(roomState.players, roomState.hostId);
+  showScreen('trivia-waiting');
+});
+
+socket.on('trivia-room-joined', ({ code, categoryName }) => {
+  triviaRoomCode = code; triviaIsHost = false;
+  $('trivia-room-code').textContent = code;
+  $('trivia-wait-theme').textContent = categoryName;
+  showScreen('trivia-waiting');
+});
+
+socket.on('trivia-room-updated', (roomState) => {
+  renderTriviaWaitPlayers(roomState.players, roomState.hostId);
+});
+
+socket.on('trivia-start', ({ totalQuestions, categoryName }) => {
+  triviaIsSolo = false;
+  triviaQuestions = { length: totalQuestions };
+  $('tg-theme-label').textContent = categoryName;
+  $('tg-scores').innerHTML = '';
+  $('tg-finished').classList.add('hidden');
+  showScreen('trivia-game');
+});
+
+socket.on('trivia-question', (data) => {
+  showTriviaQuestion(data);
+});
+
+socket.on('trivia-player-answered', ({ socketId }) => {
+  // Marquer visuellement qu'un joueur a répondu dans les scores
+  document.querySelectorAll('.tg-score-chip').forEach(chip => {
+    if (chip.dataset.sid === socketId) chip.style.outline = '2px solid #fff';
+  });
+});
+
+socket.on('trivia-reveal', (data) => {
+  showTriviaReveal({ ...data, myChoice: triviaChoiceSelected });
+});
+
+socket.on('trivia-finished', ({ scores }) => {
+  showTriviaFinished(scores);
+});
+
+socket.on('trivia-leaderboard-update', (data) => { renderTriviaLeaderboard(data); });
+socket.on('trivia-error', ({ message }) => { showTriviaError(message); showScreen('trivia-home'); });
+
+// ── Reconnexion automatique après reload + chargement du classement ───────────
 socket.on('connect', () => {
+  triviaMySocketId = socket.id;
   socket.emit('get-leaderboard');
+  socket.emit('get-trivia-leaderboard');
   const saved = sessionStorage.getItem('p4session');
   if (!saved) return;
   try {
