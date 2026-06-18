@@ -1,6 +1,7 @@
 // ── State ──────────────────────────────────────────────────────────────────
-let myPlayer = null; // 'R' | 'Y'
+let myPlayer = null;       // 'R' | 'Y'
 let gameActive = false;
+let currentRoomCode = null;
 
 // ── DOM refs ───────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -19,6 +20,15 @@ function showScreen(name) {
   screens[name].classList.add('active');
 }
 
+// ── Session persistence (survives reload) ──────────────────────────────────
+function saveSession(roomCode, player) {
+  sessionStorage.setItem('p4session', JSON.stringify({ roomCode, player }));
+}
+
+function clearSession() {
+  sessionStorage.removeItem('p4session');
+}
+
 // ── Home screen ────────────────────────────────────────────────────────────
 $('btn-create').addEventListener('click', () => {
   clearError();
@@ -31,7 +41,6 @@ $('input-code').addEventListener('keydown', e => {
   if (e.key === 'Enter') joinRoom();
 });
 
-// Auto-uppercase while typing
 $('input-code').addEventListener('input', e => {
   e.target.value = e.target.value.toUpperCase();
 });
@@ -43,6 +52,7 @@ function joinRoom() {
     return;
   }
   clearError();
+  currentRoomCode = code;
   socket.emit('join-room', { code });
 }
 
@@ -67,17 +77,16 @@ $('btn-copy').addEventListener('click', () => {
 
 // ── Game board ─────────────────────────────────────────────────────────────
 function buildBoard() {
-  const boardEl   = $('board');
-  const arrowsEl  = $('col-arrows');
+  const boardEl  = $('board');
+  const arrowsEl = $('col-arrows');
   boardEl.innerHTML  = '';
   arrowsEl.innerHTML = '';
 
-  // Arrow buttons (one per column)
   for (let col = 0; col < 7; col++) {
     const btn = document.createElement('button');
-    btn.className    = 'col-btn';
-    btn.textContent  = '▼';
-    btn.dataset.col  = col;
+    btn.className   = 'col-btn';
+    btn.textContent = '▼';
+    btn.dataset.col = col;
     btn.setAttribute('aria-label', `Jouer colonne ${col + 1}`);
     btn.addEventListener('click', () => {
       if (!gameActive) return;
@@ -86,13 +95,12 @@ function buildBoard() {
     arrowsEl.appendChild(btn);
   }
 
-  // 6 × 7 cells
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 7; col++) {
       const cell = document.createElement('div');
-      cell.className       = 'cell';
-      cell.dataset.row     = row;
-      cell.dataset.col     = col;
+      cell.className   = 'cell';
+      cell.dataset.row = row;
+      cell.dataset.col = col;
       boardEl.appendChild(cell);
     }
   }
@@ -103,14 +111,12 @@ function renderBoard(board) {
     for (let col = 0; col < 7; col++) {
       const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
       if (!cell) continue;
-      // Re-attach animation by cloning
       const val = board[row][col];
       const wasEmpty = !cell.classList.contains('red') && !cell.classList.contains('yellow');
-
       cell.classList.remove('red', 'yellow', 'win');
       if (val === 'R') {
         cell.classList.add('red');
-        if (wasEmpty) void cell.offsetWidth; // reflow to restart animation
+        if (wasEmpty) void cell.offsetWidth;
       } else if (val === 'Y') {
         cell.classList.add('yellow');
         if (wasEmpty) void cell.offsetWidth;
@@ -120,7 +126,6 @@ function renderBoard(board) {
 }
 
 function highlightWin(board, winner) {
-  // Walk the board to find 4-in-a-row belonging to winner
   const ROWS = 6, COLS = 7;
   const dirs = [[0,1],[1,0],[1,1],[1,-1]];
   const winning = new Set();
@@ -147,20 +152,15 @@ function highlightWin(board, winner) {
 }
 
 function setArrowsEnabled(enabled) {
-  document.querySelectorAll('.col-btn').forEach(btn => {
-    btn.disabled = !enabled;
-  });
+  document.querySelectorAll('.col-btn').forEach(btn => { btn.disabled = !enabled; });
 }
 
 // ── Turn / status UI ───────────────────────────────────────────────────────
 function updateTurnUI(currentPlayer) {
   const isMyTurn = currentPlayer === myPlayer;
-  const turnEl   = $('turn-indicator');
-  turnEl.textContent = isMyTurn ? 'Ton tour' : 'Adversaire joue…';
-
+  $('turn-indicator').textContent = isMyTurn ? 'Ton tour' : 'Adversaire joue…';
   $('badge-r').classList.toggle('active', currentPlayer === 'R');
   $('badge-y').classList.toggle('active', currentPlayer === 'Y');
-
   setArrowsEnabled(isMyTurn && gameActive);
 }
 
@@ -171,17 +171,40 @@ function showGameOver(status, winner, board) {
   if (winner) highlightWin(board, winner);
 
   const isWinner = winner === myPlayer;
-  const statusEl = $('status-text');
-
   if (status === 'won') {
-    statusEl.textContent = isWinner ? '🏆 Tu as gagné !' : '😞 Tu as perdu.';
+    $('status-text').textContent = isWinner ? '🏆 Tu as gagné !' : '😞 Tu as perdu.';
   } else {
-    statusEl.textContent = '🤝 Match nul !';
+    $('status-text').textContent = '🤝 Match nul !';
   }
 
   $('game-status').classList.remove('hidden');
   $('btn-restart').classList.remove('hidden');
+  $('btn-restart').disabled = false;
   $('restart-pending').classList.add('hidden');
+}
+
+function applyGameState({ board, currentPlayer, yourPlayer, status, winner }) {
+  myPlayer   = yourPlayer;
+  gameActive = status === 'playing';
+
+  $('badge-r').classList.toggle('you', yourPlayer === 'R');
+  $('badge-y').classList.toggle('you', yourPlayer === 'Y');
+
+  $('game-status').classList.add('hidden');
+  $('btn-restart').classList.remove('hidden');
+  $('btn-restart').disabled = false;
+  $('restart-pending').classList.add('hidden');
+
+  clearChat();
+  buildBoard();
+  renderBoard(board);
+
+  if (status === 'playing') {
+    updateTurnUI(currentPlayer);
+  } else {
+    $('turn-indicator').textContent = '';
+    showGameOver(status, winner, board);
+  }
 }
 
 // ── Restart ────────────────────────────────────────────────────────────────
@@ -213,7 +236,7 @@ function appendMessage({ player, text, time }) {
 
   const bubble = document.createElement('div');
   bubble.className = 'msg-bubble';
-  bubble.textContent = text; // textContent → pas d'injection XSS
+  bubble.textContent = text;
 
   const meta = document.createElement('span');
   meta.className = 'msg-meta';
@@ -232,41 +255,73 @@ function clearChat() {
   $('chat-input').value = '';
 }
 
-// ── Disconnect overlay ─────────────────────────────────────────────────────
+// ── Disconnect overlay helpers ─────────────────────────────────────────────
+function showReconnectingOverlay() {
+  $('dc-icon').textContent  = '⏳';
+  $('dc-title').textContent = 'Connexion interrompue';
+  $('dc-msg').textContent   = "L'adversaire se reconnecte… (30 s)";
+  $('btn-home').classList.add('hidden');
+  $('overlay-disconnect').classList.remove('hidden');
+}
+
+function showDisconnectedOverlay() {
+  $('dc-icon').textContent  = '⚠️';
+  $('dc-title').textContent = 'Adversaire déconnecté';
+  $('dc-msg').textContent   = "L'adversaire a quitté la partie.";
+  $('btn-home').classList.remove('hidden');
+  $('overlay-disconnect').classList.remove('hidden');
+}
+
+function hideOverlay() {
+  $('overlay-disconnect').classList.add('hidden');
+}
+
 $('btn-home').addEventListener('click', () => {
+  clearSession();
   location.reload();
 });
 
 // ── Socket events ──────────────────────────────────────────────────────────
+
+// Auto-reconnect on (re)connect if a session is saved
+socket.on('connect', () => {
+  const saved = sessionStorage.getItem('p4session');
+  if (!saved) return;
+  try {
+    const { roomCode, player } = JSON.parse(saved);
+    socket.emit('reconnect-room', { code: roomCode, player });
+  } catch {
+    clearSession();
+  }
+});
+
 socket.on('room-created', ({ code }) => {
+  currentRoomCode = code;
   $('room-code').textContent = code;
   showScreen('waiting');
 });
 
 socket.on('game-start', ({ board, currentPlayer, yourPlayer }) => {
-  myPlayer   = yourPlayer;
-  gameActive = true;
-
-  // Label "moi" on the right badge
-  $('badge-r').classList.toggle('you', yourPlayer === 'R');
-  $('badge-y').classList.toggle('you', yourPlayer === 'Y');
-
-  // Hide status banner & reset restart button
-  $('game-status').classList.add('hidden');
-  $('btn-restart').classList.remove('hidden');
-  $('btn-restart').disabled = false;
-  $('restart-pending').classList.add('hidden');
-
-  clearChat();
-  buildBoard();
-  renderBoard(board);
-  updateTurnUI(currentPlayer);
+  saveSession(currentRoomCode, yourPlayer);
+  applyGameState({ board, currentPlayer, yourPlayer, status: 'playing', winner: null });
   showScreen('game');
+});
+
+socket.on('reconnect-success', ({ board, currentPlayer, yourPlayer, status, winner, roomCode }) => {
+  currentRoomCode = roomCode;
+  saveSession(roomCode, yourPlayer);
+  hideOverlay();
+  applyGameState({ board, currentPlayer, yourPlayer, status, winner });
+  showScreen('game');
+});
+
+socket.on('reconnect-failed', () => {
+  clearSession();
+  // Stay on home screen (page already reloaded, showing home by default)
 });
 
 socket.on('game-update', ({ board, currentPlayer, status, winner }) => {
   renderBoard(board);
-
   if (status === 'playing') {
     updateTurnUI(currentPlayer);
   } else {
@@ -275,29 +330,44 @@ socket.on('game-update', ({ board, currentPlayer, status, winner }) => {
   }
 });
 
-socket.on('restart-requested', () => {
-  // The other player wants a rematch — show the button if game is over
-  if (!$('game-status').classList.contains('hidden')) {
-    $('status-text').textContent += '\nL\'adversaire veut rejouer !';
-  }
+socket.on('opponent-reconnecting', () => {
+  gameActive = false;
+  setArrowsEnabled(false);
+  showReconnectingOverlay();
 });
 
-socket.on('restart-vote-sent', () => {
-  // Confirmation that vote was received (already handled in click handler)
+socket.on('opponent-reconnected', () => {
+  hideOverlay();
+  // The reconnected player receives reconnect-success which resets state;
+  // we just need to re-enable play for the waiting player
+  gameActive = true;
+  // Turn indicator will be set correctly by the next game-update or current state
+  // Re-read current turn from the server isn't needed — just restore arrows if it's our turn
+  // (the server is authoritative; next move will validate anyway)
+  const currentTurnBadge = document.querySelector('.player-badge.active');
+  const currentTurnPlayer = currentTurnBadge?.id === 'badge-r' ? 'R' : 'Y';
+  setArrowsEnabled(currentTurnPlayer === myPlayer);
 });
 
 socket.on('player-disconnected', () => {
   gameActive = false;
   setArrowsEnabled(false);
-  $('overlay-disconnect').classList.remove('hidden');
+  clearSession();
+  showDisconnectedOverlay();
 });
 
-socket.on('error', ({ message }) => {
-  showError(message);
+socket.on('restart-requested', () => {
+  if (!$('game-status').classList.contains('hidden')) {
+    $('status-text').textContent += "\nL'adversaire veut rejouer !";
+  }
 });
 
 socket.on('new-message', (msg) => {
   appendMessage(msg);
+});
+
+socket.on('error', ({ message }) => {
+  showError(message);
 });
 
 socket.on('connect_error', () => {

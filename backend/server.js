@@ -14,6 +14,7 @@ const io = new Server(server, {
 const rooms = new Map();
 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const RECONNECT_TIMEOUT_MS = 30_000;
 
 function generateCode() {
   let code;
@@ -34,6 +35,7 @@ function createRoom(code) {
     status: 'waiting', // waiting | playing | won | draw
     winner: null,
     restartVotes: new Set(),
+    reconnectTimers: { R: null, Y: null },
   };
 }
 
@@ -75,7 +77,6 @@ io.on('connection', (socket) => {
 
     socket.join(key);
 
-    // Send game-start individually so each player knows their color
     io.to(room.players.R).emit('game-start', {
       board: room.board,
       currentPlayer: room.currentPlayer,
@@ -88,18 +89,51 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on('reconnect-room', ({ code, player }) => {
+    const key = (code || '').toUpperCase().trim();
+    const room = rooms.get(key);
+
+    if (!room || (player !== 'R' && player !== 'Y') || room.players[player] !== null) {
+      socket.emit('reconnect-failed');
+      return;
+    }
+
+    // Cancel the pending delete timer
+    if (room.reconnectTimers[player]) {
+      clearTimeout(room.reconnectTimers[player]);
+      room.reconnectTimers[player] = null;
+    }
+
+    room.players[player] = socket.id;
+    roomCode = key;
+    myPlayer = player;
+
+    socket.join(key);
+
+    socket.emit('reconnect-success', {
+      board: room.board,
+      currentPlayer: room.currentPlayer,
+      yourPlayer: player,
+      status: room.status,
+      winner: room.winner,
+      roomCode: room.code,
+    });
+
+    // Notify the other player if they're still connected
+    socket.to(key).emit('opponent-reconnected');
+  });
+
   socket.on('make-move', ({ col }) => {
     const room = rooms.get(roomCode);
     if (!room || room.status !== 'playing') return;
 
-    // Reject move if it's not this player's turn
     if (room.players[room.currentPlayer] !== socket.id) return;
 
     const colIndex = parseInt(col, 10);
     if (isNaN(colIndex) || colIndex < 0 || colIndex >= 7) return;
 
     const row = dropPiece(room.board, colIndex, room.currentPlayer);
-    if (row === -1) return; // column full
+    if (row === -1) return;
 
     let status = 'playing';
     let winner = null;
@@ -132,7 +166,6 @@ io.on('connection', (socket) => {
     room.restartVotes.add(socket.id);
 
     if (room.restartVotes.size >= 2) {
-      // Both agreed — reset the game
       room.board = createBoard();
       room.currentPlayer = 'R';
       room.status = 'playing';
@@ -150,7 +183,6 @@ io.on('connection', (socket) => {
         yourPlayer: 'Y',
       });
     } else {
-      // Notify the other player that this one wants a rematch
       socket.to(roomCode).emit('restart-requested');
       socket.emit('restart-vote-sent');
     }
@@ -158,7 +190,7 @@ io.on('connection', (socket) => {
 
   socket.on('send-message', ({ text }) => {
     const room = rooms.get(roomCode);
-    if (!room || !room.players.Y) return; // les deux joueurs doivent être présents
+    if (!room || !room.players.Y) return;
 
     const clean = String(text || '').trim().slice(0, 200);
     if (!clean) return;
@@ -172,8 +204,23 @@ io.on('connection', (socket) => {
     const room = rooms.get(roomCode);
     if (!room) return;
 
-    socket.to(roomCode).emit('player-disconnected');
-    rooms.delete(roomCode);
+    room.players[myPlayer] = null;
+
+    // If the game hasn't started yet (only 1 player), just delete immediately
+    if (room.status === 'waiting') {
+      rooms.delete(roomCode);
+      return;
+    }
+
+    // Give 30s for the player to reload and reconnect
+    room.reconnectTimers[myPlayer] = setTimeout(() => {
+      if (!room.players[myPlayer]) {
+        io.to(roomCode).emit('player-disconnected');
+        rooms.delete(roomCode);
+      }
+    }, RECONNECT_TIMEOUT_MS);
+
+    socket.to(roomCode).emit('opponent-reconnecting');
   });
 });
 

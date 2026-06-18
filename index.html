@@ -109,13 +109,13 @@
 
   </div>
 
-  <!-- ── Overlay : Déconnexion ── -->
+  <!-- ── Overlay : Déconnexion / reconnexion ── -->
   <div id="overlay-disconnect" class="overlay hidden">
     <div class="overlay-box">
-      <div class="overlay-icon">⚠️</div>
-      <h2>Adversaire déconnecté</h2>
-      <p>L'adversaire a quitté la partie.</p>
-      <button id="btn-home" class="btn btn-primary">Retour à l'accueil</button>
+      <div id="dc-icon" class="overlay-icon"></div>
+      <h2 id="dc-title"></h2>
+      <p id="dc-msg"></p>
+      <button id="btn-home" class="btn btn-primary hidden">Retour à l'accueil</button>
     </div>
   </div>
 
