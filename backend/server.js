@@ -156,6 +156,17 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('send-message', ({ text }) => {
+    const room = rooms.get(roomCode);
+    if (!room || !room.players.Y) return; // les deux joueurs doivent être présents
+
+    const clean = String(text || '').trim().slice(0, 200);
+    if (!clean) return;
+
+    const time = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    io.to(roomCode).emit('new-message', { player: myPlayer, text: clean, time });
+  });
+
   socket.on('disconnect', () => {
     if (!roomCode) return;
     const room = rooms.get(roomCode);

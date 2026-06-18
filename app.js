@@ -191,6 +191,43 @@ $('btn-restart').addEventListener('click', () => {
   $('restart-pending').classList.remove('hidden');
 });
 
+// ── Chat ───────────────────────────────────────────────────────────────────
+$('chat-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const input = $('chat-input');
+  const text  = input.value.trim();
+  if (!text) return;
+  socket.emit('send-message', { text });
+  input.value = '';
+});
+
+function appendMessage({ player, text, time }) {
+  const mine = player === myPlayer;
+
+  const msg = document.createElement('div');
+  msg.className = `msg ${mine ? 'msg-mine' : 'msg-theirs'}`;
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  bubble.textContent = text; // textContent → pas d'injection XSS
+
+  const meta = document.createElement('span');
+  meta.className = 'msg-meta';
+  meta.textContent = time;
+
+  msg.appendChild(bubble);
+  msg.appendChild(meta);
+
+  const messagesEl = $('chat-messages');
+  messagesEl.appendChild(msg);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function clearChat() {
+  $('chat-messages').innerHTML = '';
+  $('chat-input').value = '';
+}
+
 // ── Disconnect overlay ─────────────────────────────────────────────────────
 $('btn-home').addEventListener('click', () => {
   location.reload();
@@ -216,6 +253,7 @@ socket.on('game-start', ({ board, currentPlayer, yourPlayer }) => {
   $('btn-restart').disabled = false;
   $('restart-pending').classList.add('hidden');
 
+  clearChat();
   buildBoard();
   renderBoard(board);
   updateTurnUI(currentPlayer);
@@ -252,6 +290,10 @@ socket.on('player-disconnected', () => {
 
 socket.on('error', ({ message }) => {
   showError(message);
+});
+
+socket.on('new-message', (msg) => {
+  appendMessage(msg);
 });
 
 socket.on('connect_error', () => {
