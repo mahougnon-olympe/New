@@ -1489,7 +1489,7 @@ const cursorSnake = (() => {
   wrap.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9998;';
   document.body.appendChild(wrap);
 
-  for (let i = 0; i < 45; i++) {
+  for (let i = 0; i < 100; i++) {
     const size     = (0.9 + Math.random() * 0.8).toFixed(2);
     const left     = (Math.random() * 97).toFixed(1);
     const fallDur  = (2.8 + Math.random() * 3).toFixed(2);
