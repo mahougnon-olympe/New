@@ -484,6 +484,16 @@ io.on('connection', (socket) => {
     socket.emit('trivia-leaderboard-update', getTriviaLeaderboardData());
   });
 
+  // ── Trivia : fin de partie solo ──────────────────────────────────────────
+  socket.on('solo-trivia-finished', ({ name, score, total } = {}) => {
+    const playerName = String(name || '').trim().slice(0, 20) || 'Anonyme';
+    const n = Math.max(1, parseInt(total) || 10);
+    const s = Math.max(0, parseInt(score) || 0);
+    const result = s > n / 2 ? 'win' : s < n / 2 ? 'loss' : 'draw';
+    updateTriviaLeaderboard(playerName, result);
+    io.emit('trivia-leaderboard-update', getTriviaLeaderboardData());
+  });
+
   // ── Chat ─────────────────────────────────────────────────────────────────
   socket.on('send-message', ({ text }) => {
     const room = rooms.get(roomCode);

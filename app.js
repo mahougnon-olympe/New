@@ -874,10 +874,12 @@ $('btn-leave-trivia-game').addEventListener('click', goToTriviaHome);
 // ── Trivia solo : logique locale ──────────────────────────────────────────────
 function soloNextQuestion() {
   if (triviaCurrentQ >= triviaQuestions.length) {
-    const scores = [{ name: getTriviaName() || 'Toi', score: triviaScore, colorIndex: 0 }];
+    const name = getTriviaName() || 'Anonyme';
+    const scores = [{ name, score: triviaScore, colorIndex: 0 }];
     $('tg-q-num').textContent = '';
     $('tg-timer').textContent = '–';
     showTriviaFinished(scores);
+    socket.emit('solo-trivia-finished', { name, score: triviaScore, total: triviaQuestions.length });
     return;
   }
   const q = triviaQuestions[triviaCurrentQ];
