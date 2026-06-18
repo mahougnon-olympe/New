@@ -144,6 +144,139 @@
     </div>
   </div>
 
+  <!-- ── Bouton aide (flottant) ── -->
+  <button id="btn-help" class="btn-help-float" title="Aide">?</button>
+
+  <!-- ── Overlay : Aide ── -->
+  <div id="overlay-help" class="overlay hidden">
+    <div class="help-modal">
+
+      <div class="help-modal-header">
+        <h2 class="help-modal-title">Aide</h2>
+        <button id="btn-help-close" class="help-close-btn">✕</button>
+      </div>
+
+      <div class="help-tabs-bar">
+        <button class="help-tab active" data-tab="general">Général</button>
+        <button class="help-tab" data-tab="connect4">Puissance 4</button>
+        <button class="help-tab" data-tab="ttt">Morpion</button>
+        <button class="help-tab" data-tab="chess">Échecs</button>
+      </div>
+
+      <div class="help-body">
+
+        <!-- Général -->
+        <div class="help-panel active" id="help-tab-general">
+          <div class="help-item">
+            <span class="help-icon">🎮</span>
+            <div><strong>Créer une partie</strong><p>Choisis un jeu, entre ton pseudo (optionnel) puis clique <em>Créer une partie</em>. Partage le code à 4 lettres affiché à ton adversaire.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">🔗</span>
+            <div><strong>Rejoindre</strong><p>Entre le code à 4 lettres reçu et clique <em>Rejoindre</em>. La partie démarre automatiquement dès que les deux joueurs sont connectés.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">💬</span>
+            <div><strong>Chat</strong><p>Envoie des messages à ton adversaire pendant la partie. Le bouton <em>Vider</em> efface l'historique côté local uniquement.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">🔄</span>
+            <div><strong>Reconnexion</strong><p>Si tu recharges la page, tu retrouves automatiquement ta partie en cours. L'adversaire a <strong>30 secondes</strong> pour se reconnecter, sinon la partie est annulée.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">🔁</span>
+            <div><strong>Rejouer</strong><p>En fin de partie, clique <em>Rejouer</em>. La partie redémarre uniquement si les deux joueurs acceptent.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">🏆</span>
+            <div><strong>Classement</strong><p>Les victoires, défaites et nuls sont comptabilisés par pseudo. Le classement est visible sur l'accueil et mis à jour en temps réel.</p></div>
+          </div>
+        </div>
+
+        <!-- Puissance 4 -->
+        <div class="help-panel" id="help-tab-connect4">
+          <div class="help-item">
+            <span class="help-icon">🎯</span>
+            <div><strong>Objectif</strong><p>Aligner <strong>4 pions</strong> de ta couleur, horizontalement, verticalement ou en diagonale.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">👥</span>
+            <div><strong>Joueurs</strong><p>Rouge 🔴 contre Jaune 🟡. Le joueur Rouge commence toujours.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">▼</span>
+            <div><strong>Comment jouer</strong><p>Clique sur le bouton <strong>▼</strong> au-dessus de la colonne où tu veux faire tomber ton pion. Le pion descend tout en bas de la colonne.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">📐</span>
+            <div><strong>Grille</strong><p>7 colonnes × 6 rangées. Une colonne pleine ne peut plus être jouée.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">✨</span>
+            <div><strong>Fin de partie</strong><p>Les 4 pions gagnants sont surlignés. Si la grille est pleine sans alignement, c'est un match nul.</p></div>
+          </div>
+        </div>
+
+        <!-- Tic Tac Toe -->
+        <div class="help-panel" id="help-tab-ttt">
+          <div class="help-item">
+            <span class="help-icon">🎯</span>
+            <div><strong>Objectif</strong><p>Aligner <strong>3 symboles</strong> identiques en ligne, en colonne ou en diagonale.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">👥</span>
+            <div><strong>Joueurs</strong><p>Croix ✕ contre Rond ○. Le joueur Croix commence toujours.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">👆</span>
+            <div><strong>Comment jouer</strong><p>Clique sur une <strong>case vide</strong> pour y poser ton symbole. Impossible de jouer sur une case déjà occupée.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">📐</span>
+            <div><strong>Grille</strong><p>3 × 3 cases, soit 9 cases au total.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">✨</span>
+            <div><strong>Fin de partie</strong><p>La ligne gagnante est surlignée. Si les 9 cases sont remplies sans alignement, c'est un match nul.</p></div>
+          </div>
+        </div>
+
+        <!-- Échecs -->
+        <div class="help-panel" id="help-tab-chess">
+          <div class="help-item">
+            <span class="help-icon">🎯</span>
+            <div><strong>Objectif</strong><p>Mettre le roi adverse en <strong>échec et mat</strong> (il est attaqué et ne peut plus s'échapper).</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">👥</span>
+            <div><strong>Joueurs</strong><p>Blancs ♔ contre Noirs ♚. Les Blancs commencent toujours. Le plateau est orienté : tes pièces sont toujours en bas.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">👆</span>
+            <div><strong>Comment jouer</strong><p><strong>1.</strong> Clique sur une de tes pièces → les cases accessibles s'affichent.<br><strong>2.</strong> <em>Point noir</em> = case libre · <em>Anneau</em> = capture possible.<br><strong>3.</strong> Clique sur une case surlignée pour jouer le coup.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">🔴</span>
+            <div><strong>Échec</strong><p>Quand ton roi est en échec, sa case devient <strong>rouge</strong>. Tu dois obligatoirement parer l'échec.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">🟡</span>
+            <div><strong>Dernier coup</strong><p>Les deux cases du dernier coup joué sont surlignées en <strong>jaune</strong>.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">♛</span>
+            <div><strong>Promotion du pion</strong><p>Quand ton pion atteint la dernière rangée, une fenêtre s'ouvre pour choisir la pièce de remplacement : Dame, Tour, Fou ou Cavalier.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">📜</span>
+            <div><strong>Règles avancées</strong><p>Le <strong>roque</strong> (petit et grand), la <strong>prise en passant</strong> et le <strong>pat</strong> (match nul) sont gérés automatiquement.</p></div>
+          </div>
+        </div>
+
+      </div><!-- /.help-body -->
+    </div><!-- /.help-modal -->
+  </div>
+
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script src="config.js"></script>
   <script src="app.js"></script>

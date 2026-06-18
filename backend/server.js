@@ -302,5 +302,15 @@ io.on('connection', (socket) => {
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
+app.get('/admin/reset', (req, res) => {
+  const adminKey = process.env.ADMIN_KEY;
+  if (!adminKey || req.query.key !== adminKey) {
+    return res.status(401).json({ error: 'Clé invalide.' });
+  }
+  leaderboard.clear();
+  io.emit('leaderboard-update', []);
+  res.json({ ok: true, message: 'Classement réinitialisé.' });
+});
+
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => console.log(`Serveur démarré sur le port ${PORT}`));

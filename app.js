@@ -625,6 +625,26 @@ function showDisconnectedOverlay() {
 function hideOverlay() { $('overlay-disconnect').classList.add('hidden'); }
 
 $('btn-home').addEventListener('click', goToHome);
+
+// ── Aide ──────────────────────────────────────────────────────────────────────
+$('btn-help').addEventListener('click', () => {
+  $('overlay-help').classList.remove('hidden');
+});
+$('btn-help-close').addEventListener('click', () => {
+  $('overlay-help').classList.add('hidden');
+});
+$('overlay-help').addEventListener('click', e => {
+  if (e.target === $('overlay-help')) $('overlay-help').classList.add('hidden');
+});
+
+document.querySelectorAll('.help-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.help-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.help-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    $(`help-tab-${tab.dataset.tab}`).classList.add('active');
+  });
+});
 $('btn-menu').addEventListener('click', goToHome);
 
 // ── Événements Socket.IO ──────────────────────────────────────────────────────
