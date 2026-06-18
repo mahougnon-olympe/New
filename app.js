@@ -1147,3 +1147,36 @@ function spawnParticles(x, y) {
 document.addEventListener('click', e => {
   if (e.target.closest('.btn-primary, .landing-card')) spawnParticles(e.clientX, e.clientY);
 }, { passive: true });
+
+// ── Thème adaptatif selon l'heure ─────────────────────────────────────────────
+(function () {
+  let lastLight = null;
+  let clockTimer = null;
+
+  function applyThemeByTime() {
+    const h = new Date().getHours();
+    const isLight = h >= 7 && h < 20;
+
+    if (isLight !== lastLight) {
+      document.documentElement.classList.toggle('light', isLight);
+      showThemeClock(isLight ? '☀️ Thème jour' : '🌙 Thème nuit');
+      lastLight = isLight;
+    }
+  }
+
+  function showThemeClock(label) {
+    let el = document.getElementById('theme-clock');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'theme-clock';
+      document.body.appendChild(el);
+    }
+    el.textContent = label;
+    el.classList.add('visible');
+    clearTimeout(clockTimer);
+    clockTimer = setTimeout(() => el.classList.remove('visible'), 3000);
+  }
+
+  applyThemeByTime();
+  setInterval(applyThemeByTime, 60_000);
+})();

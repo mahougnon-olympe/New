@@ -782,3 +782,70 @@ h1 {
 @media (max-width: 340px) {
   :root { --cell: 9.5vw; --chess-cell: 9.5vw; --ttt-cell: 24vw; }
 }
+
+/* ══════════════════════════════════════════
+   THÈME ADAPTATIF SELON L'HEURE
+   Clair : 7h–20h  |  Sombre : 20h–7h
+══════════════════════════════════════════ */
+
+/* Transition douce sur le fond lors du changement */
+body { transition: background-color .8s ease, color .5s ease; }
+.card, .lb-card, .chat, .game-status, .overlay-box, .help-modal,
+.tg-question-box, .tg-choice, .code-display, .game-btn, .theme-btn,
+.btn-secondary, .promo-btn, #chat-input,
+#input-name, #input-code, #input-trivia-name, #input-trivia-code {
+  transition: background-color .5s ease, color .4s ease,
+              border-color .4s ease, box-shadow .4s ease;
+}
+
+/* ── Variables claires ── */
+html.light {
+  --bg:     #f0f4ff;
+  --card:   #ffffff;
+  --card2:  #eef0fb;
+  --text:   #1e1b4b;
+  --muted:  #64748b;
+  --border: rgba(99,102,241,.22);
+  --glow:   rgba(99,102,241,.2);
+  --shadow: 0 4px 24px rgba(99,102,241,.1);
+}
+
+/* ── Fond clair ── */
+html.light body {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 75% 55% at 12% 8%,  rgba(99,102,241,.07) 0%, transparent 58%),
+    radial-gradient(ellipse 60% 45% at 88% 88%,  rgba(129,140,248,.05) 0%, transparent 55%),
+    radial-gradient(circle, rgba(99,102,241,.05) 1px, transparent 1px);
+}
+
+/* ── Corrections des couleurs codées en dur ── */
+html.light .divider::before,
+html.light .divider::after         { background: rgba(0,0,0,.08); }
+html.light .c4-cell                { background: #dde3f8; }
+html.light .chat-form              { border-top-color: rgba(0,0,0,.07); }
+html.light .help-modal-header      { border-bottom-color: rgba(0,0,0,.07); }
+html.light .lb-row                 { border-bottom-color: rgba(0,0,0,.07); }
+html.light .col-btn:disabled       { color: rgba(0,0,0,.2); }
+html.light .tg-choice-letter       { background: rgba(99,102,241,.1); color: var(--board); }
+html.light .help-close-btn         { background: rgba(0,0,0,.05); }
+html.light .help-tab:hover:not(.active) { background: rgba(0,0,0,.04); }
+html.light .overlay                { background: rgba(30,27,75,.55); }
+html.light #screen-landing         { background: radial-gradient(ellipse at 50% 5%, rgba(99,102,241,.1) 0%, transparent 65%); }
+
+/* ── Indicateur thème (apparaît 3 s lors du changement) ── */
+#theme-clock {
+  position: fixed;
+  top: 16px; right: 16px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  font-size: .8rem; font-weight: 700; color: var(--accent);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .4s ease, background-color .5s ease, color .4s ease, border-color .4s ease;
+  z-index: 300;
+}
+#theme-clock.visible { opacity: 1; }
