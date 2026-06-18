@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Puissance 4 — Multijoueur</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Écran 1 : Accueil ── -->
+  <div id="screen-home" class="screen active">
+    <div class="logo">
+      <div class="logo-pieces">
+        <span class="piece red"></span>
+        <span class="piece yellow"></span>
+        <span class="piece red"></span>
+        <span class="piece yellow"></span>
+      </div>
+      <h1>Puissance 4</h1>
+      <p class="subtitle">Multijoueur en temps réel</p>
+    </div>
+
+    <div class="card">
+      <button id="btn-create" class="btn btn-primary">Créer une partie</button>
+
+      <div class="divider"><span>ou</span></div>
+
+      <div class="join-group">
+        <input
+          id="input-code"
+          type="text"
+          placeholder="Code à 4 lettres"
+          maxlength="4"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="characters"
+          spellcheck="false"
+        />
+        <button id="btn-join" class="btn btn-secondary">Rejoindre</button>
+      </div>
+
+      <p id="error-msg" class="error-msg hidden"></p>
+    </div>
+  </div>
+
+  <!-- ── Écran 2 : Attente adversaire ── -->
+  <div id="screen-waiting" class="screen">
+    <div class="card waiting-card">
+      <div class="spinner"></div>
+      <h2>En attente d'un adversaire…</h2>
+      <p>Partage ce code :</p>
+      <div id="room-code" class="code-display"></div>
+      <button id="btn-copy" class="btn btn-secondary">Copier le code</button>
+      <p class="hint">La partie démarre automatiquement dès que ton adversaire rejoint.</p>
+    </div>
+  </div>
+
+  <!-- ── Écran 3 : Jeu ── -->
+  <div id="screen-game" class="screen">
+
+    <header class="game-header">
+      <div class="player-badge" id="badge-r">
+        <span class="piece red small"></span>
+        <span id="label-r">Rouge</span>
+      </div>
+      <div id="turn-indicator" class="turn-text"></div>
+      <div class="player-badge" id="badge-y">
+        <span id="label-y">Jaune</span>
+        <span class="piece yellow small"></span>
+      </div>
+    </header>
+
+    <main class="board-wrapper">
+      <!-- Arrow buttons to choose a column -->
+      <div id="col-arrows" class="col-arrows"></div>
+      <!-- The 6×7 board -->
+      <div id="board" class="board"></div>
+    </main>
+
+    <!-- Status banner (win / draw / restart) -->
+    <div id="game-status" class="game-status hidden">
+      <p id="status-text" class="status-text"></p>
+      <div class="status-actions">
+        <button id="btn-restart" class="btn btn-primary hidden">Rejouer</button>
+        <p id="restart-pending" class="hint hidden">En attente de l'adversaire…</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Overlay : Déconnexion ── -->
+  <div id="overlay-disconnect" class="overlay hidden">
+    <div class="overlay-box">
+      <div class="overlay-icon">⚠️</div>
+      <h2>Adversaire déconnecté</h2>
+      <p>L'adversaire a quitté la partie.</p>
+      <button id="btn-home" class="btn btn-primary">Retour à l'accueil</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

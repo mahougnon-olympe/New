@@ -1,0 +1,326 @@
+/* ── Reset & base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --red:    #e74c3c;
+  --yellow: #f1c40f;
+  --board:  #1a56db;
+  --board-dark: #1341b0;
+  --bg:     #f0f4ff;
+  --card:   #ffffff;
+  --text:   #1a1a2e;
+  --muted:  #64748b;
+  --radius: 16px;
+  --shadow: 0 4px 24px rgba(0,0,0,.10);
+  --cell:   min(11vw, 56px);
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Screens ── */
+.screen {
+  display: none;
+  min-height: 100dvh;
+  padding: 24px 16px 32px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+.screen.active { display: flex; }
+
+/* ── Logo ── */
+.logo { text-align: center; }
+
+.logo-pieces {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--board);
+}
+
+.subtitle { color: var(--muted); margin-top: 4px; }
+
+/* ── Card ── */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px 24px;
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .1s, opacity .1s;
+}
+.btn:active { transform: scale(.97); }
+
+.btn-primary   { background: var(--board); color: #fff; }
+.btn-secondary { background: #e8eeff; color: var(--board); }
+
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Divider ── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: .85rem;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e2e8f0;
+}
+
+/* ── Join input ── */
+.join-group { display: flex; flex-direction: column; gap: 10px; }
+
+#input-code {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--board);
+  transition: border-color .2s;
+}
+#input-code:focus { outline: none; border-color: var(--board); }
+
+/* ── Error ── */
+.error-msg {
+  color: var(--red);
+  font-size: .875rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* ── Waiting screen ── */
+.waiting-card { text-align: center; }
+
+.spinner {
+  width: 40px; height: 40px;
+  border: 4px solid #e8eeff;
+  border-top-color: var(--board);
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.code-display {
+  font-size: 2.5rem;
+  font-weight: 900;
+  letter-spacing: 10px;
+  color: var(--board);
+  background: #e8eeff;
+  border-radius: 10px;
+  padding: 16px;
+  margin: 8px 0;
+}
+
+.hint {
+  font-size: .8rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ── Game header ── */
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: calc(var(--cell) * 7 + 12px);
+  padding: 12px 0;
+}
+
+.player-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background .2s, color .2s;
+}
+
+.player-badge.active {
+  background: #e8eeff;
+  color: var(--board);
+}
+
+.player-badge.you::after {
+  content: ' (moi)';
+  font-weight: 400;
+  opacity: .7;
+}
+
+.turn-text {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ── Board ── */
+.board-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.col-arrows {
+  display: grid;
+  grid-template-columns: repeat(7, var(--cell));
+  gap: 3px;
+}
+
+.col-btn {
+  height: 36px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: var(--board);
+  border-radius: 8px;
+  transition: background .15s;
+}
+.col-btn:hover  { background: #dce7ff; }
+.col-btn:active { background: #c5d7ff; }
+.col-btn:disabled { color: #ccc; cursor: not-allowed; }
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(7, var(--cell));
+  grid-template-rows:    repeat(6, var(--cell));
+  gap: 3px;
+  background: var(--board);
+  padding: 6px;
+  border-radius: 14px;
+  box-shadow: 0 6px 32px rgba(26,86,219,.35);
+}
+
+/* ── Cells ── */
+.cell {
+  border-radius: 50%;
+  background: var(--bg);
+  transition: background .18s;
+}
+
+.cell.red    { background: var(--red); }
+.cell.yellow { background: var(--yellow); }
+
+/* Drop animation */
+@keyframes drop {
+  from { transform: translateY(-40px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+.cell.red, .cell.yellow { animation: drop .18s ease-out; }
+
+/* ── Pieces (decorative) ── */
+.piece {
+  display: inline-block;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+}
+.piece.small { width: 18px; height: 18px; }
+.piece.red    { background: var(--red);    box-shadow: 0 2px 6px rgba(231,76,60,.4); }
+.piece.yellow { background: var(--yellow); box-shadow: 0 2px 6px rgba(241,196,15,.4); }
+
+/* ── Game status banner ── */
+.game-status {
+  width: 100%;
+  max-width: calc(var(--cell) * 7 + 12px);
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.status-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.status-actions { display: flex; flex-direction: column; gap: 10px; }
+
+/* ── Overlay ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+
+.overlay-box {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 32px 24px;
+  text-align: center;
+  max-width: 320px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.overlay-icon { font-size: 2.5rem; }
+
+/* ── Utilities ── */
+.hidden { display: none !important; }
+
+/* ── Highlight winning cells ── */
+.cell.win {
+  box-shadow: 0 0 0 3px #fff inset;
+  animation: none;
+}
+
+/* ── Responsive tweak for very small screens ── */
+@media (max-width: 340px) {
+  :root { --cell: 9.5vw; }
+}
