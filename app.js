@@ -192,6 +192,10 @@ $('btn-restart').addEventListener('click', () => {
 });
 
 // ── Chat ───────────────────────────────────────────────────────────────────
+$('btn-clear-chat').addEventListener('click', () => {
+  $('chat-messages').innerHTML = '';
+});
+
 $('chat-form').addEventListener('submit', e => {
   e.preventDefault();
   const input = $('chat-input');
