@@ -146,6 +146,39 @@ h1 {
 .btn-secondary:hover { background: rgba(99,102,241,.12); }
 .btn:disabled { opacity: .35; cursor: not-allowed; }
 
+/* ── Bot difficulty row ── */
+.bot-label {
+  font-size: .8rem;
+  color: var(--muted);
+  margin: .2rem 0 .4rem;
+  text-align: center;
+}
+.bot-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: .2rem;
+}
+.bot-btn {
+  flex: 1;
+  font-size: .82rem;
+  padding: .65rem .3rem;
+  background: var(--card2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  transition: background .2s, transform .1s, box-shadow .2s;
+}
+.bot-btn:hover {
+  background: rgba(99,102,241,.14);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.bot-btn[data-diff="easy"]   { border-color: rgba(22,163,74,.45); }
+.bot-btn[data-diff="medium"] { border-color: rgba(234,88,12,.45); }
+.bot-btn[data-diff="hard"]   { border-color: rgba(220,38,38,.45); }
+.bot-btn[data-diff="easy"]:hover   { background: rgba(22,163,74,.12); box-shadow: 0 0 0 2px #16a34a; }
+.bot-btn[data-diff="medium"]:hover { background: rgba(234,88,12,.12); box-shadow: 0 0 0 2px #ea580c; }
+.bot-btn[data-diff="hard"]:hover   { background: rgba(220,38,38,.12); box-shadow: 0 0 0 2px #dc2626; }
+
 /* ── Divider ── */
 .divider {
   display: flex;

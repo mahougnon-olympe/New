@@ -32,7 +32,14 @@ function tttMinimax(board, isMaximizing) {
   return best;
 }
 
-function botMoveTTT(board) {
+function tttRandomMove(board) {
+  const empties = board.reduce((a, v, i) => v === null ? [...a, i] : a, []);
+  return empties.length ? empties[Math.floor(Math.random() * empties.length)] : -1;
+}
+
+function botMoveTTT(board, difficulty = 'hard') {
+  if (difficulty === 'easy') return tttRandomMove(board);
+  if (difficulty === 'medium' && Math.random() < 0.35) return tttRandomMove(board);
   const b = [...board];
   let best = -Infinity, cell = -1;
   for (let i = 0; i < 9; i++) {
@@ -129,11 +136,12 @@ function c4Minimax(board, depth, alpha, beta, isMax) {
   return best;
 }
 
-function botMoveConnect4(board) {
+function botMoveConnect4(board, difficulty = 'hard') {
   const cols = c4ValidCols(board);
   if (!cols.length) return -1;
+  if (difficulty === 'easy') return cols[Math.floor(Math.random() * cols.length)];
   const pieces = board.flat().filter(c => c !== null).length;
-  const depth  = pieces < 12 ? 4 : pieces < 26 ? 5 : 6;
+  const depth = difficulty === 'medium' ? 3 : (pieces < 12 ? 4 : pieces < 26 ? 5 : 6);
   const res = c4Minimax(board, depth, -Infinity, Infinity, true);
   return res.col !== undefined ? res.col : cols[Math.floor(Math.random() * cols.length)];
 }
@@ -175,20 +183,26 @@ function chessMinimax(chess, depth, alpha, beta, isBlack) {
   return best;
 }
 
-function botMoveChess(fen) {
+function botMoveChess(fen, difficulty = 'hard') {
   let chess;
   try { chess = new Chess(fen); } catch { return null; }
 
   const moves = chess.moves({ verbose: true });
   if (!moves.length) return null;
 
+  if (difficulty === 'easy') {
+    const m = moves[Math.floor(Math.random() * moves.length)];
+    return { from: m.from, to: m.to, promotion: m.promotion || 'q' };
+  }
+
   moves.sort((a, b) => (P_VAL[b.captured] || 0) - (P_VAL[a.captured] || 0));
+
+  const depth = difficulty === 'medium' ? 1 : 2;
 
   let bestScore = -Infinity, bestMove = moves[0];
   for (const m of moves) {
     chess.move(m);
-    // Après le coup du bot, c'est le tour des blancs → isBlack = false
-    const s = chessMinimax(chess, 2, -Infinity, Infinity, false);
+    const s = chessMinimax(chess, depth, -Infinity, Infinity, false);
     chess.undo();
     if (s > bestScore) { bestScore = s; bestMove = m; }
   }

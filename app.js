@@ -92,9 +92,11 @@ document.querySelectorAll('.game-btn').forEach(btn => {
 });
 
 // ── Accueil ──────────────────────────────────────────────────────────────────
-$('btn-bot').addEventListener('click', () => {
-  clearError();
-  socket.emit('create-room', { gameType: selectedGameType, name: getPlayerName(), vsBot: true });
+document.querySelectorAll('.bot-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    clearError();
+    socket.emit('create-room', { gameType: selectedGameType, name: getPlayerName(), vsBot: true, botDifficulty: btn.dataset.diff });
+  });
 });
 
 $('btn-create').addEventListener('click', () => {
@@ -1059,12 +1061,15 @@ socket.on('room-created', ({ code, gameType }) => {
   showScreen('waiting');
 });
 
-socket.on('game-start', ({ gameType, state, yourPlayer, vsBot }) => {
+socket.on('game-start', ({ gameType, state, yourPlayer, vsBot, botDifficulty }) => {
   isBotGame = !!vsBot;
   saveSession(currentRoomCode, yourPlayer);
   applyGameState({ gameType, state, yourPlayer, status: 'playing', winner: null });
   $('chat').classList.toggle('hidden', isBotGame);
-  if (isBotGame) $('label-y').textContent = '🤖 Robot';
+  if (isBotGame) {
+    const diffLabel = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' }[botDifficulty] || '';
+    $('label-y').textContent = diffLabel ? `🤖 Robot (${diffLabel})` : '🤖 Robot';
+  }
   showScreen('game');
 });
 

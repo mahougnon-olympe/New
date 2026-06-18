@@ -228,9 +228,10 @@ function scheduleBotMove(code) {
 
     let newState, status, winner;
 
+    const diff = room.botDifficulty || 'medium';
     switch (room.gameType) {
       case 'tictactoe': {
-        const cell = bots.botMoveTTT(room.state.board);
+        const cell = bots.botMoveTTT(room.state.board, diff);
         if (cell === -1) return;
         const res = tictactoe.applyMove(room.state, cell);
         if (!res) return;
@@ -239,7 +240,7 @@ function scheduleBotMove(code) {
         break;
       }
       case 'connect4': {
-        const col = bots.botMoveConnect4(room.state.board);
+        const col = bots.botMoveConnect4(room.state.board, diff);
         if (col === -1) return;
         const board = room.state.board.map(r => [...r]);
         const row   = connect4.dropPiece(board, col, 'Y');
@@ -251,7 +252,7 @@ function scheduleBotMove(code) {
         break;
       }
       case 'chess': {
-        const move = bots.botMoveChess(room.state.fen);
+        const move = bots.botMoveChess(room.state.fen, diff);
         if (!move) return;
         const res = chessGame.applyMove(room.state, move);
         if (!res) return;
@@ -277,9 +278,10 @@ io.on('connection', (socket) => {
   let triviaRoomCode = null;
 
   // ── Créer une room ──────────────────────────────────────────────────────
-  socket.on('create-room', ({ gameType = 'connect4', name = '', vsBot = false } = {}) => {
+  socket.on('create-room', ({ gameType = 'connect4', name = '', vsBot = false, botDifficulty = 'medium' } = {}) => {
     if (!VALID_GAMES.has(gameType)) return;
     const playerName = String(name).trim().slice(0, 20) || 'Anonyme';
+    const diff = ['easy', 'medium', 'hard'].includes(botDifficulty) ? botDifficulty : 'medium';
 
     const code = generateCode();
     rooms.set(code, {
@@ -290,6 +292,7 @@ io.on('connection', (socket) => {
       playerNames: { R: playerName, Y: vsBot ? '🤖 Robot' : null },
       status: vsBot ? 'playing' : 'waiting',
       vsBot,
+      botDifficulty: diff,
       winner: null,
       restartVotes: new Set(),
       reconnectTimers: { R: null, Y: null },
@@ -300,7 +303,7 @@ io.on('connection', (socket) => {
     socket.join(code);
 
     if (vsBot) {
-      socket.emit('game-start', { gameType, state: createInitialState(gameType), yourPlayer: 'R', vsBot: true });
+      socket.emit('game-start', { gameType, state: createInitialState(gameType), yourPlayer: 'R', vsBot: true, botDifficulty: diff });
     } else {
       socket.emit('room-created', { code, gameType });
     }
@@ -454,7 +457,7 @@ io.on('connection', (socket) => {
       room.state  = createInitialState(room.gameType);
       room.status = 'playing';
       room.winner = null;
-      socket.emit('game-start', { gameType: room.gameType, state: room.state, yourPlayer: 'R', vsBot: true });
+      socket.emit('game-start', { gameType: room.gameType, state: room.state, yourPlayer: 'R', vsBot: true, botDifficulty: room.botDifficulty });
       return;
     }
 
