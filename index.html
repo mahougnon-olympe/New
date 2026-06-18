@@ -249,6 +249,7 @@
 
       <div class="help-tabs-bar">
         <button class="help-tab active" data-tab="general">Général</button>
+        <button class="help-tab" data-tab="quiz">Quiz</button>
         <button class="help-tab" data-tab="connect4">Puissance 4</button>
         <button class="help-tab" data-tab="ttt">Morpion</button>
         <button class="help-tab" data-tab="chess">Échecs</button>
@@ -259,8 +260,12 @@
         <!-- Général -->
         <div class="help-panel active" id="help-tab-general">
           <div class="help-item">
+            <span class="help-icon">🏠</span>
+            <div><strong>Deux sections</strong><p>L'accueil propose <em>Jeux Classiques</em> (Puissance 4, Morpion, Échecs) et <em>Culture Générale</em> (quiz par thèmes). Chaque section a son propre classement.</p></div>
+          </div>
+          <div class="help-item">
             <span class="help-icon">🎮</span>
-            <div><strong>Créer une partie</strong><p>Choisis un jeu, entre ton pseudo (optionnel) puis clique <em>Créer une partie</em>. Partage le code à 4 lettres affiché à ton adversaire.</p></div>
+            <div><strong>Créer une partie classique</strong><p>Choisis un jeu, entre ton pseudo (optionnel) puis clique <em>Créer une partie</em>. Partage le code à 4 lettres affiché à ton adversaire.</p></div>
           </div>
           <div class="help-item">
             <span class="help-icon">🔗</span>
@@ -268,19 +273,47 @@
           </div>
           <div class="help-item">
             <span class="help-icon">💬</span>
-            <div><strong>Chat</strong><p>Envoie des messages à ton adversaire pendant la partie. Le bouton <em>Vider</em> efface l'historique côté local uniquement.</p></div>
+            <div><strong>Chat</strong><p>Envoie des messages à ton adversaire pendant une partie classique. Le bouton <em>Vider</em> efface l'historique côté local uniquement.</p></div>
           </div>
           <div class="help-item">
             <span class="help-icon">🔄</span>
-            <div><strong>Reconnexion</strong><p>Si tu recharges la page, tu retrouves automatiquement ta partie en cours. L'adversaire a <strong>30 secondes</strong> pour se reconnecter, sinon la partie est annulée.</p></div>
+            <div><strong>Reconnexion</strong><p>Si tu recharges la page, tu retrouves automatiquement ta partie classique en cours. L'adversaire a <strong>30 secondes</strong> pour se reconnecter, sinon la partie est annulée.</p></div>
           </div>
           <div class="help-item">
             <span class="help-icon">🔁</span>
-            <div><strong>Rejouer</strong><p>En fin de partie, clique <em>Rejouer</em>. La partie redémarre uniquement si les deux joueurs acceptent.</p></div>
+            <div><strong>Rejouer</strong><p>En fin de partie classique, clique <em>Rejouer</em>. La partie redémarre uniquement si les deux joueurs acceptent.</p></div>
           </div>
           <div class="help-item">
             <span class="help-icon">🏆</span>
-            <div><strong>Classement</strong><p>Les victoires, défaites et nuls sont comptabilisés par pseudo. Le classement est visible sur l'accueil et mis à jour en temps réel.</p></div>
+            <div><strong>Classements</strong><p>Jeux classiques : victoires / défaites / nuls par pseudo. Quiz : total de points cumulés sur tous les quiz (solo et multi). Les deux sont mis à jour en temps réel.</p></div>
+          </div>
+        </div>
+
+        <!-- Quiz -->
+        <div class="help-panel" id="help-tab-quiz">
+          <div class="help-item">
+            <span class="help-icon">🧠</span>
+            <div><strong>Culture Générale</strong><p>Réponds à <strong>10 questions</strong> à choix multiple sur le thème de ton choix parmi 12 catégories : Histoire, Sciences, Cinéma, Musique, etc.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">▶</span>
+            <div><strong>Mode Solo</strong><p>Sélectionne un thème et clique <em>Solo</em>. Tu joues seul à ton rythme. Ton score est automatiquement ajouté au classement à la fin.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">👥</span>
+            <div><strong>Mode Multijoueur</strong><p>Clique <em>Créer un salon</em> (2 à 6 joueurs). Partage le code à 4 lettres. L'hôte lance la partie quand tout le monde est prêt. Tout le monde voit les mêmes questions en même temps.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">⏱</span>
+            <div><strong>Chrono</strong><p>Tu as <strong>20 secondes</strong> par question. Le chrono passe en rouge sous les 5 secondes. Sans réponse dans le temps imparti, la question est perdue.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">✅</span>
+            <div><strong>Correction</strong><p>Après chaque réponse (ou expiration du temps), la bonne réponse s'affiche en vert et les mauvaises en rouge. En multi, tu vois aussi le score de chaque joueur.</p></div>
+          </div>
+          <div class="help-item">
+            <span class="help-icon">🏆</span>
+            <div><strong>Classement Quiz</strong><p>1 point par bonne réponse. Les points s'accumulent quiz après quiz, qu'on joue en solo ou en groupe. Le classement affiche le total de points et le nombre de quiz joués.</p></div>
           </div>
         </div>
 
