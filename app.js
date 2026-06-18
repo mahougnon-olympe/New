@@ -1334,7 +1334,17 @@ socket.on('restart-requested', () => {
 });
 
 socket.on('new-message',       (msg)  => { appendMessage(msg); });
-socket.on('leaderboard-update', (data) => { renderLeaderboard(data); });
+socket.on('leaderboard-update', (data) => {
+  renderLeaderboard(data);
+  const name = localStorage.getItem('playerName') || '';
+  const idx  = name ? data.findIndex(e => e.name === name) : -1;
+  if (idx !== -1) {
+    const rank = idx + 1;
+    const wins = data[idx].wins || 0;
+    const rankBonus = [8, 5, 3, 1, 0][Math.min(4, rank - 1)];
+    cursorSnake.update(4 + Math.min(6, wins) + rankBonus, rank);
+  }
+});
 
 socket.on('error', ({ message }) => { showError(message); });
 socket.on('connect_error', () => { showError(t().errConnect); });
@@ -1406,4 +1416,68 @@ document.addEventListener('click', e => {
 
   applyThemeByTime();
   setInterval(applyThemeByTime, 60_000);
+})();
+
+// ── Serpent curseur ───────────────────────────────────────────────────────────
+const cursorSnake = (() => {
+  const MAX = 18, MIN = 4, GAP = 13, HEAD_SZ = 12, TAIL_SZ = 5;
+  let segs = [], mx = -999, my = -999, curHue = 140;
+
+  // Couleur selon rang : or / argent / bronze / vert
+  function hueFor(rank) {
+    return rank === 1 ? 48 : rank === 2 ? 205 : rank === 3 ? 22 : 140;
+  }
+
+  function build(len, h) {
+    segs.forEach(s => s.el.remove());
+    segs = [];
+    curHue = h;
+    for (let i = 0; i < len; i++) {
+      const p  = len > 1 ? i / (len - 1) : 0;
+      const sz = HEAD_SZ - p * (HEAD_SZ - TAIL_SZ);
+      const el = document.createElement('div');
+      el.style.cssText =
+        `position:fixed;border-radius:50%;pointer-events:none;user-select:none;` +
+        `z-index:${999 - i};transform:translate(-50%,-50%);` +
+        `width:${sz.toFixed(1)}px;height:${sz.toFixed(1)}px;` +
+        `background:hsl(${h},${(80 - p * 20).toFixed(0)}%,${(58 - p * 22).toFixed(0)}%);` +
+        `opacity:${(1 - p * 0.82).toFixed(2)};` +
+        (i === 0 ? `box-shadow:0 0 8px 3px hsl(${h},80%,65%);` : '');
+      document.body.appendChild(el);
+      segs.push({ el, x: -999, y: -999 });
+    }
+  }
+
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+  document.addEventListener('touchmove', e => {
+    const t = e.touches[0]; mx = t.clientX; my = t.clientY;
+  }, { passive: true });
+
+  (function tick() {
+    if (segs.length) {
+      // Tête suit la souris avec un léger lissage
+      segs[0].x += (mx - segs[0].x) * 0.18;
+      segs[0].y += (my - segs[0].y) * 0.18;
+
+      // Chaque segment maintient une distance fixe avec le précédent
+      for (let i = 1; i < segs.length; i++) {
+        const pr = segs[i - 1], cu = segs[i];
+        const dx = pr.x - cu.x, dy = pr.y - cu.y;
+        const d  = Math.hypot(dx, dy);
+        if (d > GAP) { const r = (d - GAP) / d * 0.5; cu.x += dx * r; cu.y += dy * r; }
+      }
+      segs.forEach(s => { s.el.style.left = `${s.x}px`; s.el.style.top = `${s.y}px`; });
+    }
+    requestAnimationFrame(tick);
+  })();
+
+  build(MIN, curHue);
+
+  return {
+    update(len, rank) {
+      const h = hueFor(rank);
+      const n = Math.min(MAX, Math.max(MIN, len));
+      if (n !== segs.length || h !== curHue) build(n, h);
+    }
+  };
 })();
