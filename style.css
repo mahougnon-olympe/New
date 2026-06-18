@@ -687,19 +687,7 @@ h1 {
 /* ── Landing ── */
 #screen-landing {
   background: radial-gradient(ellipse at 50% 5%, rgba(99,102,241,.2) 0%, transparent 65%);
-  position: relative;
-  overflow: hidden;
 }
-#screen-landing::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: url('libero.jpeg') center 10% / auto 92% no-repeat;
-  opacity: .40;
-  pointer-events: none;
-  z-index: 0;
-}
-#screen-landing > * { position: relative; z-index: 1; }
 .landing-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
