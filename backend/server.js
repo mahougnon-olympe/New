@@ -590,6 +590,20 @@ io.on('connection', (socket) => {
     triviaRoomCode = null;
   });
 
+  // ── Trivia : fetch questions solo (proxy pour éviter le CORS côté client) ────
+  socket.on('fetch-trivia-solo', async ({ categories = [], amount = 10, lang = 'fr' } = {}) => {
+    const cats = [].concat(categories).map(c => parseInt(c)).filter(c => TRIVIA_CATEGORIES[c]);
+    if (!cats.length) { socket.emit('trivia-solo-error'); return; }
+    const l = ['fr', 'en'].includes(lang) ? lang : 'fr';
+    const n = Math.min(20, Math.max(1, parseInt(amount) || 10));
+    try {
+      const qs = cats.length === 1
+        ? await triviaGame.fetchQuestions(cats[0], n, l)
+        : await triviaGame.fetchQuestionsMulti(cats, n, l);
+      socket.emit('trivia-solo-questions', qs);
+    } catch { socket.emit('trivia-solo-error'); }
+  });
+
   // ── Trivia : classement ──────────────────────────────────────────────────
   socket.on('get-trivia-leaderboard', () => {
     socket.emit('trivia-leaderboard-update', getTriviaLeaderboardData());

@@ -885,30 +885,6 @@ function getCategoryLabel(ids) {
   return t().mixLabel(names.length);
 }
 
-async function fetchTriviaFromCategory(catId, amount) {
-  if (currentLang === 'en') {
-    const url = `https://opentdb.com/api.php?amount=${amount}&category=${catId}&type=multiple&encode=url3986`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (data.response_code !== 0) throw new Error('code:' + data.response_code);
-    return data.results.map(q => ({
-      question: decodeURIComponent(q.question),
-      choices:  shuffle([...q.incorrect_answers, q.correct_answer].map(decodeURIComponent)),
-      correct:  decodeURIComponent(q.correct_answer),
-    }));
-  } else {
-    const cat = TRIVIA_API_CAT_MAP[catId] || 'general_knowledge';
-    const url = `https://the-trivia-api.com/v2/questions?limit=${amount}&language=fr&categories=${cat}`;
-    const res = await fetch(url);
-    const items = await res.json();
-    if (!Array.isArray(items) || items.length === 0) throw new Error('empty');
-    return items.map(q => ({
-      question: q.question.text,
-      choices:  shuffle([q.correctAnswer, ...q.incorrectAnswers]),
-      correct:  q.correctAnswer,
-    }));
-  }
-}
 
 function showTriviaError(msg) { const e = $('trivia-error-msg'); e.textContent = msg; e.classList.remove('hidden'); }
 function clearTriviaError()   { $('trivia-error-msg').classList.add('hidden'); }
@@ -960,30 +936,12 @@ $('input-trivia-name').addEventListener('input', e => {
 // Boutons trivia home
 $('btn-back-trivia-home').addEventListener('click', () => { clearTriviaError(); showScreen('landing'); });
 
-$('btn-solo-trivia').addEventListener('click', async () => {
+$('btn-solo-trivia').addEventListener('click', () => {
   if (!selectedTriviaCategories.length) { showTriviaError(t().errNoTheme); return; }
   clearTriviaError();
   $('btn-solo-trivia').disabled = true;
   $('btn-solo-trivia').textContent = t().soloLoading;
-  try {
-    const perCat = Math.max(2, Math.ceil(10 / selectedTriviaCategories.length));
-    const allResults = await Promise.all(selectedTriviaCategories.map(id => fetchTriviaFromCategory(id, perCat)));
-    triviaQuestions = shuffle(allResults.flat()).slice(0, 10);
-    if (triviaQuestions.length === 0) throw new Error('no questions');
-  } catch {
-    showTriviaError(t().errLoadQ);
-    $('btn-solo-trivia').disabled = false;
-    $('btn-solo-trivia').textContent = t().btnSolo;
-    return;
-  }
-  $('btn-solo-trivia').disabled = false;
-  $('btn-solo-trivia').textContent = t().btnSolo;
-  triviaIsSolo = true; triviaCurrentQ = 0; triviaScore = 0; triviaRoomCode = null;
-  $('tg-theme-label').textContent = getCategoryLabel(selectedTriviaCategories);
-  $('tg-scores').innerHTML = '';
-  $('tg-finished').classList.add('hidden');
-  showScreen('trivia-game');
-  soloNextQuestion();
+  socket.emit('fetch-trivia-solo', { categories: selectedTriviaCategories, amount: 10, lang: currentLang });
 });
 
 $('btn-create-trivia').addEventListener('click', () => {
@@ -1257,6 +1215,25 @@ socket.on('trivia-reveal', (data) => {
 
 socket.on('trivia-finished', ({ scores }) => {
   showTriviaFinished(scores);
+});
+
+socket.on('trivia-solo-questions', (questions) => {
+  $('btn-solo-trivia').disabled = false;
+  $('btn-solo-trivia').textContent = t().btnSolo;
+  triviaQuestions = shuffle(questions).slice(0, 10);
+  if (!triviaQuestions.length) { showTriviaError(t().errLoadQ); return; }
+  triviaIsSolo = true; triviaCurrentQ = 0; triviaScore = 0; triviaRoomCode = null;
+  $('tg-theme-label').textContent = getCategoryLabel(selectedTriviaCategories);
+  $('tg-scores').innerHTML = '';
+  $('tg-finished').classList.add('hidden');
+  showScreen('trivia-game');
+  soloNextQuestion();
+});
+
+socket.on('trivia-solo-error', () => {
+  showTriviaError(t().errLoadQ);
+  $('btn-solo-trivia').disabled = false;
+  $('btn-solo-trivia').textContent = t().btnSolo;
 });
 
 socket.on('trivia-leaderboard-update', (data) => { renderTriviaLeaderboard(data); });

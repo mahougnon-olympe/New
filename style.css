@@ -825,6 +825,12 @@ h1 {
 .tg-final-name  { flex: 1; }
 .tg-final-score { font-size: 1rem; }
 
+/* ── Screen-home : flex-start pour garder le classement accessible ── */
+#screen-home {
+  justify-content: flex-start;
+  padding-top: 24px;
+}
+
 /* ── Utilities ── */
 .hidden { display: none !important; }
 
