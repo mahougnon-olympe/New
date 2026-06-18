@@ -831,6 +831,16 @@ h1 {
   padding-top: 24px;
 }
 
+/* ── Emoji rain ── */
+@keyframes emoji-rain {
+  0%   { transform: translateY(-70px) translateX(0)    rotate(0deg);   opacity: 0; }
+  10%  { opacity: 1; }
+  30%  { transform: translateY(28vh)  translateX(14px)  rotate(120deg); }
+  65%  { transform: translateY(62vh)  translateX(-10px) rotate(260deg); }
+  88%  { opacity: 1; }
+  100% { transform: translateY(108vh) translateX(5px)  rotate(380deg); opacity: 0; }
+}
+
 /* ── Utilities ── */
 .hidden { display: none !important; }
 

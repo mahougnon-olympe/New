@@ -1481,3 +1481,26 @@ const cursorSnake = (() => {
     }
   };
 })();
+
+// ── Pluie d'émojis au chargement ──────────────────────────────────────────────
+(() => {
+  const EMOJIS = ['🔴','🟡','♟','♔','♚','♛','♜','♝','♞','❌','⭕','🧠','❓','💡','🎮','🎯','🏆','🎲'];
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:9998;';
+  document.body.appendChild(wrap);
+
+  for (let i = 0; i < 45; i++) {
+    const el = document.createElement('span');
+    el.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+    const size  = (1.1 + Math.random() * 1.7).toFixed(2);
+    const left  = (Math.random() * 97).toFixed(1);
+    const dur   = (2.6 + Math.random() * 3).toFixed(2);
+    const delay = (Math.random() * 2.8).toFixed(2);
+    el.style.cssText =
+      `position:absolute;left:${left}%;top:0;font-size:${size}rem;line-height:1;` +
+      `will-change:transform;animation:emoji-rain ${dur}s ${delay}s ease-in forwards;`;
+    wrap.appendChild(el);
+  }
+
+  setTimeout(() => wrap.remove(), 8000);
+})();
