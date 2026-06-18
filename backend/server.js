@@ -93,12 +93,25 @@ io.on('connection', (socket) => {
     const key = (code || '').toUpperCase().trim();
     const room = rooms.get(key);
 
-    if (!room || (player !== 'R' && player !== 'Y') || room.players[player] !== null) {
+    if (!room || (player !== 'R' && player !== 'Y')) {
       socket.emit('reconnect-failed');
       return;
     }
 
-    // Cancel the pending delete timer
+    // Race condition guard: the new socket may arrive before the old disconnect event
+    // fires on the server. Check whether the stored socket is actually still alive.
+    const storedId = room.players[player];
+    if (storedId !== null) {
+      const storedSocket = io.sockets.sockets.get(storedId);
+      if (storedSocket?.connected) {
+        // Slot is genuinely held by an active socket — refuse
+        socket.emit('reconnect-failed');
+        return;
+      }
+      // Stored socket is already gone; proceed as if slot were empty
+    }
+
+    // Cancel the pending delete timer (may or may not have started yet)
     if (room.reconnectTimers[player]) {
       clearTimeout(room.reconnectTimers[player]);
       room.reconnectTimers[player] = null;
@@ -119,8 +132,11 @@ io.on('connection', (socket) => {
       roomCode: room.code,
     });
 
-    // Notify the other player if they're still connected
-    socket.to(key).emit('opponent-reconnected');
+    // Notify the other player directly by socket ID to avoid room-membership issues
+    const other = player === 'R' ? 'Y' : 'R';
+    if (room.players[other]) {
+      io.to(room.players[other]).emit('opponent-reconnected');
+    }
   });
 
   socket.on('make-move', ({ col }) => {
@@ -204,23 +220,31 @@ io.on('connection', (socket) => {
     const room = rooms.get(roomCode);
     if (!room) return;
 
+    // If reconnect-room already replaced this socket with a new one, do nothing
+    if (room.players[myPlayer] !== socket.id) return;
+
     room.players[myPlayer] = null;
 
-    // If the game hasn't started yet (only 1 player), just delete immediately
+    // If the game hasn't started yet (only 1 player), delete immediately
     if (room.status === 'waiting') {
       rooms.delete(roomCode);
       return;
     }
 
-    // Give 30s for the player to reload and reconnect
-    room.reconnectTimers[myPlayer] = setTimeout(() => {
-      if (!room.players[myPlayer]) {
-        io.to(roomCode).emit('player-disconnected');
-        rooms.delete(roomCode);
-      }
-    }, RECONNECT_TIMEOUT_MS);
+    // Notify the other player directly by socket ID
+    const other = myPlayer === 'R' ? 'Y' : 'R';
+    if (room.players[other]) {
+      io.to(room.players[other]).emit('opponent-reconnecting');
+    }
 
-    socket.to(roomCode).emit('opponent-reconnecting');
+    // Give 30s for the player to reload and reconnect before ending the game
+    room.reconnectTimers[myPlayer] = setTimeout(() => {
+      if (room.players[myPlayer] !== null) return; // already reconnected
+      if (room.players[other]) {
+        io.to(room.players[other]).emit('player-disconnected');
+      }
+      rooms.delete(roomCode);
+    }, RECONNECT_TIMEOUT_MS);
   });
 });
 
