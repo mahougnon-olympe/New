@@ -1,5 +1,7 @@
 const express = require('express');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const { Server } = require('socket.io');
 const connect4   = require('./game');
 const tictactoe  = require('./game-tictactoe');
@@ -14,6 +16,37 @@ const rooms           = new Map();
 const leaderboard     = new Map();
 const triviaRooms     = new Map();
 const triviaLeaderboard = new Map();
+
+// ── Persistance ────────────────────────────────────────────────────────────
+const DATA_FILE = path.join(__dirname, 'data.json');
+let saveTimer = null;
+
+function loadData() {
+  try {
+    const raw = fs.readFileSync(DATA_FILE, 'utf8');
+    const json = JSON.parse(raw);
+    if (json.leaderboard)       json.leaderboard.forEach(([k, v])       => leaderboard.set(k, v));
+    if (json.triviaLeaderboard) json.triviaLeaderboard.forEach(([k, v]) => triviaLeaderboard.set(k, v));
+    console.log('Classements chargés depuis data.json');
+  } catch {
+    // Premier démarrage : pas encore de fichier
+  }
+}
+
+function saveData() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const payload = {
+      leaderboard:       [...leaderboard.entries()],
+      triviaLeaderboard: [...triviaLeaderboard.entries()],
+    };
+    fs.writeFile(DATA_FILE, JSON.stringify(payload, null, 2), err => {
+      if (err) console.error('Erreur sauvegarde classements :', err);
+    });
+  }, 1000);
+}
+
+loadData();
 
 const CODE_CHARS   = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const RECONNECT_MS = 30_000;
@@ -58,6 +91,7 @@ function updateLeaderboard(name, result) {
   if (result === 'loss') e.losses++;
   if (result === 'draw') e.draws++;
   leaderboard.set(name, e);
+  saveData();
 }
 
 function getLeaderboardData() {
@@ -75,6 +109,7 @@ function updateTriviaLeaderboard(name, points) {
   e.points += Math.max(0, parseInt(points) || 0);
   e.games++;
   triviaLeaderboard.set(name, e);
+  saveData();
 }
 
 function getTriviaLeaderboardData() {
@@ -555,6 +590,7 @@ app.get('/admin/reset', (req, res) => {
   }
   leaderboard.clear();
   triviaLeaderboard.clear();
+  saveData();
   io.emit('leaderboard-update', []);
   io.emit('trivia-leaderboard-update', []);
   res.json({ ok: true, message: 'Classements réinitialisés.' });
