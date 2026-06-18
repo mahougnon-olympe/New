@@ -1,12 +1,5 @@
 const https = require('https');
 
-// Mapping catégories opentdb → the-trivia-api.com (pour le mode FR)
-const TRIVIA_API_CAT = {
-  9:'general_knowledge', 23:'history', 22:'geography', 17:'science',
-  21:'sport_and_leisure', 11:'film_and_tv', 12:'music', 14:'film_and_tv',
-  19:'science', 20:'science', 25:'arts_and_literature', 27:'general_knowledge',
-};
-
 function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -39,32 +32,58 @@ function fetchQuestionsEN(category, amount = 10) {
   });
 }
 
-// ── Français : The Trivia API (supporte FR nativement) ───────────────────────
-function fetchQuestionsFR(category, amount = 10) {
-  const cat = TRIVIA_API_CAT[category] || 'general_knowledge';
-  const url = `https://the-trivia-api.com/v2/questions?limit=${amount}&language=fr&categories=${cat}`;
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('timeout')), 10000);
+// ── Traduction FR via MyMemory (gratuit, sans clé) ────────────────────────────
+function translateTextFR(text) {
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|fr`;
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve(text), 8000);
     https.get(url, (res) => {
       let data = '';
       res.on('data', c => data += c);
       res.on('end', () => {
         clearTimeout(timeout);
         try {
-          const items = JSON.parse(data);
-          if (!Array.isArray(items) || items.length === 0) { reject(new Error('empty')); return; }
-          resolve(items.map(q => {
-            const choices = shuffle([q.correctAnswer, ...q.incorrectAnswers]);
-            return { question: q.question.text, choices, correct: q.correctAnswer };
-          }));
-        } catch (e) { reject(e); }
+          const json = JSON.parse(data);
+          if (json.responseStatus === 200 && json.responseData?.translatedText) {
+            resolve(json.responseData.translatedText);
+          } else { resolve(text); }
+        } catch { resolve(text); }
       });
-    }).on('error', e => { clearTimeout(timeout); reject(e); });
+    }).on('error', () => { clearTimeout(timeout); resolve(text); });
   });
 }
 
-function fetchQuestions(category, amount = 10, lang = 'fr') {
-  return lang === 'en' ? fetchQuestionsEN(category, amount) : fetchQuestionsFR(category, amount);
+// Traduit question + choix en un seul appel API (séparateur |||)
+async function translateQuestionFR(q) {
+  const correctIdx = q.choices.indexOf(q.correct);
+  const SEP = ' ||| ';
+  const joined = [q.question, ...q.choices].join(SEP);
+  const translated = await translateTextFR(joined);
+
+  let parts = translated.split(SEP);
+  if (parts.length !== q.choices.length + 1) {
+    // Tentative sans espaces autour du séparateur
+    parts = translated.split('|||').map(s => s.trim());
+  }
+  if (parts.length !== q.choices.length + 1) {
+    // Repli : traduire chaque texte séparément
+    const texts = await Promise.all([q.question, ...q.choices].map(t => translateTextFR(t)));
+    parts = texts;
+  }
+
+  const tChoices = parts.slice(1, q.choices.length + 1);
+  return {
+    question: parts[0],
+    choices: tChoices,
+    correct: tChoices[correctIdx] ?? q.correct,
+  };
+}
+
+// ── API principale ─────────────────────────────────────────────────────────────
+async function fetchQuestions(category, amount = 10, lang = 'fr') {
+  const questions = await fetchQuestionsEN(category, amount);
+  if (lang !== 'fr') return questions;
+  return Promise.all(questions.map(translateQuestionFR));
 }
 
 async function fetchQuestionsMulti(categories, totalAmount, lang = 'fr') {
