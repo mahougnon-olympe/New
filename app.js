@@ -904,9 +904,8 @@ function renderTriviaLeaderboard(data) {
       <span class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${medals[i] || i+1}</span>
       <span class="lb-name">${entry.name}</span>
       <div class="lb-stats">
-        <span class="lb-w">${entry.wins}V</span>
-        <span class="lb-l">${entry.losses}D</span>
-        <span class="lb-d">${entry.draws}N</span>
+        <span class="lb-w">${entry.points} pts</span>
+        <span class="lb-d">${entry.games} quiz</span>
       </div>
     </div>
   `).join('');

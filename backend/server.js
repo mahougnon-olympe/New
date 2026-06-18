@@ -69,19 +69,18 @@ function getLeaderboardData() {
 
 // ── Trivia leaderboard helpers ─────────────────────────────────────────────
 
-function updateTriviaLeaderboard(name, result) {
+function updateTriviaLeaderboard(name, points) {
   if (!name) return;
-  const e = triviaLeaderboard.get(name) || { wins: 0, losses: 0, draws: 0 };
-  if (result === 'win')  e.wins++;
-  if (result === 'loss') e.losses++;
-  if (result === 'draw') e.draws++;
+  const e = triviaLeaderboard.get(name) || { points: 0, games: 0 };
+  e.points += Math.max(0, parseInt(points) || 0);
+  e.games++;
   triviaLeaderboard.set(name, e);
 }
 
 function getTriviaLeaderboardData() {
   return [...triviaLeaderboard.entries()]
-    .map(([name, s]) => ({ name, wins: s.wins, losses: s.losses, draws: s.draws }))
-    .sort((a, b) => b.wins - a.wins)
+    .map(([name, s]) => ({ name, points: s.points, games: s.games }))
+    .sort((a, b) => b.points - a.points)
     .slice(0, 10);
 }
 
@@ -171,14 +170,10 @@ function finishTriviaGame(code) {
   room.status = 'finished';
   const scores = getRoomScores(room);
 
-  if (room.players.size >= 2) {
-    const maxScore = scores[0].score;
-    const isAllTied = scores.every(s => s.score === maxScore);
-    for (const s of scores) {
-      updateTriviaLeaderboard(s.name, isAllTied ? 'draw' : s.score === maxScore ? 'win' : 'loss');
-    }
-    io.emit('trivia-leaderboard-update', getTriviaLeaderboardData());
+  for (const s of scores) {
+    updateTriviaLeaderboard(s.name, s.score);
   }
+  io.emit('trivia-leaderboard-update', getTriviaLeaderboardData());
 
   io.to(code).emit('trivia-finished', { scores });
   setTimeout(() => triviaRooms.delete(code), 60_000);
@@ -485,12 +480,9 @@ io.on('connection', (socket) => {
   });
 
   // ── Trivia : fin de partie solo ──────────────────────────────────────────
-  socket.on('solo-trivia-finished', ({ name, score, total } = {}) => {
+  socket.on('solo-trivia-finished', ({ name, score } = {}) => {
     const playerName = String(name || '').trim().slice(0, 20) || 'Anonyme';
-    const n = Math.max(1, parseInt(total) || 10);
-    const s = Math.max(0, parseInt(score) || 0);
-    const result = s > n / 2 ? 'win' : s < n / 2 ? 'loss' : 'draw';
-    updateTriviaLeaderboard(playerName, result);
+    updateTriviaLeaderboard(playerName, score);
     io.emit('trivia-leaderboard-update', getTriviaLeaderboardData());
   });
 
