@@ -583,6 +583,23 @@ h1 {
 .btn-help-float:hover  { box-shadow: 0 0 32px rgba(99,102,241,.85); }
 .btn-help-float:active { transform: scale(.92); }
 
+.btn-lang-float {
+  position: fixed;
+  bottom: 20px; right: 72px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 22px; border: none;
+  background: var(--board); color: #fff;
+  font-size: .82rem; font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(99,102,241,.5);
+  z-index: 50;
+  transition: transform .15s, box-shadow .15s;
+  white-space: nowrap;
+}
+.btn-lang-float:hover  { box-shadow: 0 0 28px rgba(99,102,241,.8); }
+.btn-lang-float:active { transform: scale(.92); }
+
 .btn-help-inline { display: none; }
 
 @media (max-width: 600px) {

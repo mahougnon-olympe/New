@@ -145,9 +145,10 @@ async function startTriviaGame(code) {
   if (!room) return;
   try {
     const cats = room.categories || [room.category];
+    const lang = room.lang || 'fr';
     room.questions = cats.length === 1
-      ? await triviaGame.fetchQuestions(cats[0], room.totalQ)
-      : await triviaGame.fetchQuestionsMulti(cats, room.totalQ);
+      ? await triviaGame.fetchQuestions(cats[0], room.totalQ, lang)
+      : await triviaGame.fetchQuestionsMulti(cats, room.totalQ, lang);
   } catch {
     io.to(code).emit('trivia-error', { message: 'Impossible de charger les questions. Réessaie.' });
     room.status = 'waiting';
@@ -508,18 +509,20 @@ io.on('connection', (socket) => {
   });
 
   // ── Trivia : créer un salon ──────────────────────────────────────────────
-  socket.on('create-trivia-room', ({ categories, name = '' } = {}) => {
+  socket.on('create-trivia-room', ({ categories, name = '', lang = 'fr' } = {}) => {
     const cats = [].concat(categories || []).map(c => parseInt(c)).filter(c => TRIVIA_CATEGORIES[c]);
     if (cats.length === 0) return;
     const playerName = String(name).trim().slice(0, 20) || 'Anonyme';
+    const roomLang = ['fr', 'en'].includes(lang) ? lang : 'fr';
     const code = generateCode();
     const players = new Map();
     players.set(socket.id, { name: playerName, colorIndex: 0, score: 0 });
     const catNames = cats.map(c => TRIVIA_CATEGORIES[c]);
-    const categoryName = cats.length <= 2 ? catNames.join(' · ') : `Mix (${cats.length} thèmes)`;
+    const categoryName = cats.length <= 2 ? catNames.join(' · ') : `Mix (${cats.length})`;
     triviaRooms.set(code, {
       code, hostId: socket.id, categories: cats,
       categoryName,
+      lang: roomLang,
       players, questions: null, currentQ: -1,
       status: 'waiting', answersThisRound: new Map(),
       timer: null, revealTimer: null, totalQ: TRIVIA_Q_COUNT,

@@ -7,6 +7,235 @@ let selectedGameType = 'connect4';
 let isBotGame = false;
 let currentTurnPlayer = null;
 
+// ── Langue ───────────────────────────────────────────────────────────────────
+let currentLang = localStorage.getItem('lang') || 'fr';
+
+const TRIVIA_API_CAT_MAP = {
+  9:'general_knowledge', 23:'history', 22:'geography', 17:'science',
+  21:'sport_and_leisure', 11:'film_and_tv', 12:'music', 14:'film_and_tv',
+  19:'science', 20:'science', 25:'arts_and_literature', 27:'general_knowledge',
+};
+
+const DICT = {
+  fr: {
+    siteTitle:'Jeux Multijoueur', siteSubtitle:'Choisissez votre catégorie',
+    classicTitle:'Jeux Classiques', classicDesc:'Puissance 4 · Morpion · Échecs',
+    triviaTitle:'Culture Générale', triviaDesc:'Quiz par thèmes · Solo & Multi',
+    homeSubtitle:'2 joueurs • Temps réel',
+    botLabel:'🤖 Jouer seul contre le robot :',
+    botEasy:'😊 Facile', botMedium:'🎯 Moyen', botHard:'💀 Difficile',
+    btnCreate:'Créer une partie multijoueur',
+    namePh:'Ton pseudo (optionnel)', codePh:'Code à 4 lettres',
+    btnJoin:'Rejoindre', dividerJoin:'ou rejoindre', lbTitle:'Classement',
+    lbEmpty:'Aucune partie jouée pour l\'instant.',
+    lbW:'V', lbL:'D', lbD:'N',
+    btnCopyCode:'Copier le code', codeCopied:'Copié !',
+    waitingFor:'En attente d\'un adversaire…', shareCode:'Partage ce code :',
+    waitingHint:'La partie démarre automatiquement dès que ton adversaire rejoint.',
+    myTurn:'Ton tour', oppTurn:'Adversaire joue…', botThinking:'🤖 Robot réfléchit…',
+    youWon:'🏆 Tu as gagné !', youLost:'😞 Tu as perdu.', gameDraw:'🤝 Match nul !',
+    btnRestart:'Rejouer', btnMenu:'Menu principal',
+    restartPending:'En attente de l\'adversaire…',
+    chatTitle:'Chat', chatClear:'Vider', chatPh:'Envoyer un message…',
+    dcReconnecting:'Connexion interrompue',
+    dcReconnectingMsg:'L\'adversaire se reconnecte… (30 s)',
+    dcDisconnected:'Adversaire déconnecté',
+    dcDisconnectedMsg:'L\'adversaire a quitté la partie.',
+    btnBackHome:'Retour à l\'accueil', backLabel:'Retour',
+    promoTitle:'Promouvoir le pion',
+    games:{ connect4:'Puissance 4', tictactoe:'Tic Tac Toe', chess:'Échecs' },
+    playerNames:{
+      connect4:{ R:'Rouge', Y:'Jaune' },
+      tictactoe:{ R:'Croix', Y:'Rond' },
+      chess:{ R:'Blancs', Y:'Noirs' },
+    },
+    diffLabels:{ easy:'Facile', medium:'Moyen', hard:'Difficile' },
+    triviaHomeTitle:'🧠 Culture Générale',
+    triviaHomeSubtitle:'Choisis un ou plusieurs thèmes et joue !',
+    triviaNamePh:'Ton pseudo (optionnel)',
+    triviaThemesLabel:'Thèmes (sélection multiple) :',
+    btnSolo:'▶ Solo', btnCreateTrivia:'+ Créer un salon',
+    triviaCodePh:'Code à 4 lettres', btnJoinTrivia:'Rejoindre',
+    triviaLbTitle:'Classement Quiz',
+    triviaLbEmpty:'Aucune partie jouée pour l\'instant.',
+    triviaLbPts:'pts', triviaLbGames:'quiz',
+    triviaWaitTitle:'En attente de joueurs…', triviaWaitCode:'Code du salon :',
+    btnTriviaCopy:'Copier le code', btnStartTrivia:'▶ Démarrer la partie',
+    btnLeaveTrivia:'Quitter le salon',
+    triviaWaitHint:'1 à 6 joueurs. Démarre dès que tu es prêt·e.',
+    triviaCorrect:'✅ Bonne réponse !', triviaWrong:'❌ La réponse était : ',
+    triviaFinishedTitle:'Résultats finaux', btnLeaveGame:'Retour au menu',
+    errNoTheme:'Choisis au moins un thème pour commencer.',
+    errLoadQ:'Impossible de charger les questions. Vérifie ta connexion.',
+    err4Letters:'Entre un code à 4 lettres.',
+    soloLoading:'⏳ Chargement…',
+    mixLabel:n => `🎲 Mix (${n} thèmes)`,
+    colLabel:n => `Jouer colonne ${n}`,
+    restartRequested:"\nL'adversaire veut rejouer !",
+    errConnect:'Impossible de joindre le serveur. Réessaie.',
+    help:{ title:'Aide', tabs:{ general:'Général', quiz:'Quiz', connect4:'Puissance 4', ttt:'Morpion', chess:'Échecs' } },
+    triviaCats:[
+      { id:9,  name:'Culture G.', icon:'🧠' }, { id:23, name:'Histoire',   icon:'📜' },
+      { id:22, name:'Géographie', icon:'🌍' }, { id:17, name:'Sciences',   icon:'🔬' },
+      { id:21, name:'Sports',     icon:'⚽' }, { id:11, name:'Cinéma',     icon:'🎬' },
+      { id:12, name:'Musique',    icon:'🎵' }, { id:14, name:'Télévision', icon:'📺' },
+      { id:19, name:'Maths',      icon:'🔢' }, { id:20, name:'Info',       icon:'💻' },
+      { id:25, name:'Arts',       icon:'🎨' }, { id:27, name:'Animaux',    icon:'🐾' },
+    ],
+  },
+  en: {
+    siteTitle:'Multiplayer Games', siteSubtitle:'Choose your category',
+    classicTitle:'Classic Games', classicDesc:'Connect 4 · Tic Tac Toe · Chess',
+    triviaTitle:'General Knowledge', triviaDesc:'Themed quizzes · Solo & Multi',
+    homeSubtitle:'2 players • Real time',
+    botLabel:'🤖 Play solo against the bot:',
+    botEasy:'😊 Easy', botMedium:'🎯 Medium', botHard:'💀 Hard',
+    btnCreate:'Create a multiplayer game',
+    namePh:'Your username (optional)', codePh:'4-letter code',
+    btnJoin:'Join', dividerJoin:'or join', lbTitle:'Leaderboard',
+    lbEmpty:'No games played yet.',
+    lbW:'W', lbL:'L', lbD:'D',
+    btnCopyCode:'Copy code', codeCopied:'Copied!',
+    waitingFor:'Waiting for an opponent…', shareCode:'Share this code:',
+    waitingHint:'The game starts automatically when your opponent joins.',
+    myTurn:'Your turn', oppTurn:'Opponent playing…', botThinking:'🤖 Bot thinking…',
+    youWon:'🏆 You won!', youLost:'😞 You lost.', gameDraw:'🤝 Draw!',
+    btnRestart:'Play again', btnMenu:'Main menu',
+    restartPending:'Waiting for opponent…',
+    chatTitle:'Chat', chatClear:'Clear', chatPh:'Send a message…',
+    dcReconnecting:'Connection lost',
+    dcReconnectingMsg:'Opponent is reconnecting… (30 s)',
+    dcDisconnected:'Opponent disconnected',
+    dcDisconnectedMsg:'Your opponent left the game.',
+    btnBackHome:'Back to home', backLabel:'Back',
+    promoTitle:'Promote pawn',
+    games:{ connect4:'Connect 4', tictactoe:'Tic Tac Toe', chess:'Chess' },
+    playerNames:{
+      connect4:{ R:'Red', Y:'Yellow' },
+      tictactoe:{ R:'Cross', Y:'Circle' },
+      chess:{ R:'White', Y:'Black' },
+    },
+    diffLabels:{ easy:'Easy', medium:'Medium', hard:'Hard' },
+    triviaHomeTitle:'🧠 General Knowledge',
+    triviaHomeSubtitle:'Choose one or more themes and play!',
+    triviaNamePh:'Your username (optional)',
+    triviaThemesLabel:'Themes (multiple selection):',
+    btnSolo:'▶ Solo', btnCreateTrivia:'+ Create a room',
+    triviaCodePh:'4-letter code', btnJoinTrivia:'Join',
+    triviaLbTitle:'Quiz Leaderboard',
+    triviaLbEmpty:'No games played yet.',
+    triviaLbPts:'pts', triviaLbGames:'quiz',
+    triviaWaitTitle:'Waiting for players…', triviaWaitCode:'Room code:',
+    btnTriviaCopy:'Copy code', btnStartTrivia:'▶ Start game',
+    btnLeaveTrivia:'Leave room',
+    triviaWaitHint:'1 to 6 players. Start whenever you\'re ready.',
+    triviaCorrect:'✅ Correct!', triviaWrong:'❌ The answer was: ',
+    triviaFinishedTitle:'Final Results', btnLeaveGame:'Back to menu',
+    errNoTheme:'Choose at least one theme to start.',
+    errLoadQ:'Could not load questions. Check your connection.',
+    err4Letters:'Enter a 4-letter code.',
+    soloLoading:'⏳ Loading…',
+    mixLabel:n => `🎲 Mix (${n} themes)`,
+    colLabel:n => `Play column ${n}`,
+    restartRequested:'\nOpponent wants to play again!',
+    errConnect:'Cannot reach the server. Please try again.',
+    help:{ title:'Help', tabs:{ general:'General', quiz:'Quiz', connect4:'Connect 4', ttt:'Tic Tac Toe', chess:'Chess' } },
+    triviaCats:[
+      { id:9,  name:'General',   icon:'🧠' }, { id:23, name:'History',   icon:'📜' },
+      { id:22, name:'Geography', icon:'🌍' }, { id:17, name:'Science',   icon:'🔬' },
+      { id:21, name:'Sports',    icon:'⚽' }, { id:11, name:'Movies',    icon:'🎬' },
+      { id:12, name:'Music',     icon:'🎵' }, { id:14, name:'TV',        icon:'📺' },
+      { id:19, name:'Maths',     icon:'🔢' }, { id:20, name:'Computing', icon:'💻' },
+      { id:25, name:'Arts',      icon:'🎨' }, { id:27, name:'Animals',   icon:'🐾' },
+    ],
+  },
+};
+
+function t() { return DICT[currentLang]; }
+
+function applyLang() {
+  const d = t();
+  document.documentElement.lang = currentLang;
+  document.title = d.siteTitle;
+  const bl = $('btn-lang');
+  if (bl) bl.textContent = currentLang === 'fr' ? '🇬🇧 EN' : '🇫🇷 FR';
+
+  // Landing
+  const lt = $('landing-title');   if (lt) lt.textContent = d.siteTitle;
+  const ls = $('landing-subtitle'); if (ls) ls.textContent = d.siteSubtitle;
+  const bc = $('btn-go-classic');
+  if (bc) { bc.querySelector('h2').textContent = d.classicTitle; bc.querySelector('p').textContent = d.classicDesc; }
+  const bgt = $('btn-go-trivia');
+  if (bgt) { bgt.querySelector('h2').textContent = d.triviaTitle; bgt.querySelector('p').textContent = d.triviaDesc; }
+
+  // Home classic
+  const hs = $('home-subtitle');   if (hs) hs.textContent = d.homeSubtitle;
+  const gnc = $('gn-connect4');    if (gnc) gnc.textContent = d.games.connect4;
+  const gntt = $('gn-tictactoe'); if (gntt) gntt.textContent = d.games.tictactoe;
+  const gnch = $('gn-chess');     if (gnch) gnch.textContent = d.games.chess;
+  const blp = $('bot-label-p');   if (blp) blp.textContent = d.botLabel;
+  document.querySelectorAll('.bot-btn').forEach(b => {
+    const key = 'bot' + b.dataset.diff[0].toUpperCase() + b.dataset.diff.slice(1);
+    b.textContent = d[key];
+  });
+  const bcc = $('btn-create');    if (bcc) bcc.textContent = d.btnCreate;
+  const inp = $('input-name');    if (inp) inp.placeholder = d.namePh;
+  const inc = $('input-code');    if (inc) inc.placeholder = d.codePh;
+  const bj  = $('btn-join');      if (bj)  bj.textContent  = d.btnJoin;
+  const djt = $('divider-join-text'); if (djt) djt.textContent = d.dividerJoin;
+  const lbc = $('lb-title-classic'); if (lbc) lbc.textContent = d.lbTitle;
+  const bco = $('btn-copy');      if (bco) bco.textContent = d.btnCopyCode;
+  const bba = $('btn-back-classic'); if (bba) bba.textContent = `← ${d.backLabel}`;
+
+  // Waiting screen
+  const wt = $('waiting-title');  if (wt) wt.textContent = d.waitingFor;
+  const ws = $('waiting-share');  if (ws) ws.textContent = d.shareCode;
+  const wh = $('waiting-hint');   if (wh) wh.textContent = d.waitingHint;
+
+  // Game screen
+  const brs = $('btn-restart');   if (brs) brs.textContent = d.btnRestart;
+  const bmu = $('btn-menu');      if (bmu) bmu.textContent = d.btnMenu;
+  const rpe = $('restart-pending'); if (rpe) rpe.textContent = d.restartPending;
+  const cts = $('chat-title-span'); if (cts) cts.textContent = d.chatTitle;
+  const bclc = $('btn-clear-chat'); if (bclc) bclc.textContent = d.chatClear;
+  const ci  = $('chat-input');    if (ci) ci.placeholder = d.chatPh;
+  const pt  = $('promo-title');   if (pt) pt.textContent = d.promoTitle;
+
+  // Trivia home
+  const tht  = $('trivia-home-title');    if (tht)  tht.textContent  = d.triviaHomeTitle;
+  const thsu = $('trivia-home-subtitle'); if (thsu) thsu.textContent = d.triviaHomeSubtitle;
+  const itn  = $('input-trivia-name');    if (itn)  itn.placeholder  = d.triviaNamePh;
+  const ttl  = $('trivia-theme-label');   if (ttl)  ttl.textContent  = d.triviaThemesLabel;
+  const bso  = $('btn-solo-trivia');      if (bso)  bso.textContent  = d.btnSolo;
+  const bct2 = $('btn-create-trivia');    if (bct2) bct2.textContent = d.btnCreateTrivia;
+  const itc  = $('input-trivia-code');    if (itc)  itc.placeholder  = d.triviaCodePh;
+  const bjt2 = $('btn-join-trivia');      if (bjt2) bjt2.textContent = d.btnJoinTrivia;
+  const lbtt = $('lb-title-trivia');      if (lbtt) lbtt.textContent = d.triviaLbTitle;
+  const btc  = $('btn-trivia-copy');      if (btc)  btc.textContent  = d.btnTriviaCopy;
+  const bbth = $('btn-back-trivia-home'); if (bbth) bbth.textContent = `← ${d.backLabel}`;
+
+  // Trivia waiting
+  const twt  = $('trivia-waiting-title');  if (twt)  twt.textContent  = d.triviaWaitTitle;
+  const tws  = $('trivia-waiting-share');  if (tws)  tws.textContent  = d.triviaWaitCode;
+  const twh  = $('trivia-waiting-hint');   if (twh)  twh.textContent  = d.triviaWaitHint;
+  const bstt = $('btn-start-trivia');      if (bstt) bstt.textContent = d.btnStartTrivia;
+  const bltw = $('btn-leave-trivia-wait'); if (bltw) bltw.textContent = d.btnLeaveTrivia;
+
+  // Trivia game
+  const tft  = $('tg-finished-title');     if (tft)  tft.textContent  = d.triviaFinishedTitle;
+  const bltg = $('btn-leave-trivia-game'); if (bltg) bltg.textContent = d.btnLeaveGame;
+
+  // Help modal
+  const hmt = $('help-modal-title'); if (hmt) hmt.textContent = d.help.title;
+  document.querySelectorAll('.help-tab').forEach(tab => {
+    const lbl = d.help.tabs[tab.dataset.tab];
+    if (lbl) tab.textContent = lbl;
+  });
+
+  // Rebuild trivia themes (garde les sélections actives)
+  $('trivia-themes').innerHTML = '';
+}
+
 // État échecs
 let selectedSquare  = null;
 let availableMoves  = [];
@@ -28,20 +257,6 @@ function showScreen(name) {
 }
 
 // ── Trivia : constantes ───────────────────────────────────────────────────────
-const TRIVIA_CATS = [
-  { id: 9,  name: 'Culture G.', icon: '🧠' },
-  { id: 23, name: 'Histoire',   icon: '📜' },
-  { id: 22, name: 'Géographie', icon: '🌍' },
-  { id: 17, name: 'Sciences',   icon: '🔬' },
-  { id: 21, name: 'Sports',     icon: '⚽' },
-  { id: 11, name: 'Cinéma',     icon: '🎬' },
-  { id: 12, name: 'Musique',    icon: '🎵' },
-  { id: 14, name: 'Télévision', icon: '📺' },
-  { id: 19, name: 'Maths',      icon: '🔢' },
-  { id: 20, name: 'Info',       icon: '💻' },
-  { id: 25, name: 'Arts',       icon: '🎨' },
-  { id: 27, name: 'Animaux',    icon: '🐾' },
-];
 const TRIVIA_COLORS = ['#2563eb','#dc2626','#16a34a','#9333ea','#ea580c','#0891b2'];
 
 // ── Trivia : état ─────────────────────────────────────────────────────────────
@@ -58,16 +273,10 @@ let triviaScore            = 0;
 let triviaMySocketId       = null;
 
 // ── Données par type de jeu ──────────────────────────────────────────────────
-const GAME_NAMES  = { connect4: 'Puissance 4', tictactoe: 'Tic Tac Toe', chess: 'Échecs' };
 const PLAYER_ICONS = {
   connect4:  { R: '🔴', Y: '🟡' },
   tictactoe: { R: '✕',  Y: '○' },
   chess:     { R: '♔',  Y: '♚' },
-};
-const PLAYER_NAMES = {
-  connect4:  { R: 'Rouge',   Y: 'Jaune'  },
-  tictactoe: { R: 'Croix',   Y: 'Rond'   },
-  chess:     { R: 'Blancs',  Y: 'Noirs'  },
 };
 
 // ── Landing ───────────────────────────────────────────────────────────────────
@@ -110,7 +319,7 @@ $('input-code').addEventListener('input', e => { e.target.value = e.target.value
 
 function joinRoom() {
   const code = $('input-code').value.trim().toUpperCase();
-  if (code.length !== 4) { showError('Entre un code à 4 lettres.'); return; }
+  if (code.length !== 4) { showError(t().err4Letters); return; }
   clearError();
   currentRoomCode = code;
   socket.emit('join-room', { code, name: getPlayerName() });
@@ -128,15 +337,15 @@ function clearSession() { sessionStorage.removeItem('p4session'); }
 // ── Attente ───────────────────────────────────────────────────────────────────
 $('btn-copy').addEventListener('click', () => {
   navigator.clipboard.writeText($('room-code').textContent).then(() => {
-    $('btn-copy').textContent = 'Copié !';
-    setTimeout(() => { $('btn-copy').textContent = 'Copier le code'; }, 2000);
+    $('btn-copy').textContent = t().codeCopied;
+    setTimeout(() => { $('btn-copy').textContent = t().btnCopyCode; }, 2000);
   });
 });
 
 // ── Header joueurs ────────────────────────────────────────────────────────────
 function setPlayerBadges(gameType, yourPlayer) {
   const icons = PLAYER_ICONS[gameType];
-  const names = PLAYER_NAMES[gameType];
+  const names = t().playerNames[gameType];
   $('badge-r-icon').textContent = icons.R;
   $('badge-y-icon').textContent = icons.Y;
   $('label-r').textContent = names.R;
@@ -148,7 +357,7 @@ function setPlayerBadges(gameType, yourPlayer) {
 function updateTurnUI(currentPlayer, gameType) {
   currentTurnPlayer = currentPlayer;
   const isMyTurn = currentPlayer === myPlayer;
-  $('turn-indicator').textContent = isMyTurn ? 'Ton tour' : (isBotGame ? '🤖 Robot réfléchit…' : 'Adversaire joue…');
+  $('turn-indicator').textContent = isMyTurn ? t().myTurn : (isBotGame ? t().botThinking : t().oppTurn);
   $('badge-r').classList.toggle('active', currentPlayer === 'R');
   $('badge-y').classList.toggle('active', currentPlayer === 'Y');
 
@@ -192,9 +401,9 @@ function showGameOver(status, winner) {
 
   const isWinner = winner === myPlayer;
   if (status === 'won') {
-    $('status-text').textContent = isWinner ? '🏆 Tu as gagné !' : '😞 Tu as perdu.';
+    $('status-text').textContent = isWinner ? t().youWon : t().youLost;
   } else {
-    $('status-text').textContent = '🤝 Match nul !';
+    $('status-text').textContent = t().gameDraw;
   }
   $('game-status').classList.remove('hidden');
   $('btn-restart').classList.remove('hidden');
@@ -263,7 +472,7 @@ function buildConnect4(container, board) {
     btn.className = 'col-btn';
     btn.textContent = '▼';
     btn.dataset.col = col;
-    btn.setAttribute('aria-label', `Jouer colonne ${col + 1}`);
+    btn.setAttribute('aria-label', t().colLabel(col + 1));
     btn.addEventListener('click', () => { if (gameActive) socket.emit('make-move', { col }); });
     arrows.appendChild(btn);
   }
@@ -635,7 +844,7 @@ function clearChat() {
 function renderLeaderboard(data) {
   const list = $('leaderboard-list');
   if (!data || data.length === 0) {
-    list.innerHTML = '<p class="lb-empty">Aucune partie jouée pour l\'instant.</p>';
+    list.innerHTML = `<p class="lb-empty">${t().lbEmpty}</p>`;
     return;
   }
   const medals = ['🥇', '🥈', '🥉'];
@@ -645,9 +854,9 @@ function renderLeaderboard(data) {
       <span class="lb-rank ${classes[i] || ''}">${medals[i] || i + 1}</span>
       <span class="lb-name">${entry.name}</span>
       <div class="lb-stats">
-        <span class="lb-w">${entry.wins}V</span>
-        <span class="lb-l">${entry.losses}D</span>
-        <span class="lb-d">${entry.draws}N</span>
+        <span class="lb-w">${entry.wins}${t().lbW}</span>
+        <span class="lb-l">${entry.losses}${t().lbL}</span>
+        <span class="lb-d">${entry.draws}${t().lbD}</span>
       </div>
     </div>
   `).join('');
@@ -666,25 +875,39 @@ function shuffle(arr) {
 function getTriviaName() { return ($('input-trivia-name').value.trim()) || ''; }
 
 function getCategoryLabel(ids) {
+  const cats = t().triviaCats;
   const names = ids.map(id => {
-    const c = TRIVIA_CATS.find(c => c.id === id);
+    const c = cats.find(c => c.id === id);
     return c ? `${c.icon} ${c.name}` : '';
   }).filter(Boolean);
   if (names.length === 0) return '';
   if (names.length <= 2) return names.join(' · ');
-  return `🎲 Mix (${names.length} thèmes)`;
+  return t().mixLabel(names.length);
 }
 
 async function fetchTriviaFromCategory(catId, amount) {
-  const url = `https://opentdb.com/api.php?amount=${amount}&category=${catId}&type=multiple&encode=url3986`;
-  const res = await fetch(url);
-  const data = await res.json();
-  if (data.response_code !== 0) throw new Error('code:' + data.response_code);
-  return data.results.map(q => ({
-    question: decodeURIComponent(q.question),
-    choices:  shuffle([...q.incorrect_answers, q.correct_answer].map(decodeURIComponent)),
-    correct:  decodeURIComponent(q.correct_answer),
-  }));
+  if (currentLang === 'en') {
+    const url = `https://opentdb.com/api.php?amount=${amount}&category=${catId}&type=multiple&encode=url3986`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.response_code !== 0) throw new Error('code:' + data.response_code);
+    return data.results.map(q => ({
+      question: decodeURIComponent(q.question),
+      choices:  shuffle([...q.incorrect_answers, q.correct_answer].map(decodeURIComponent)),
+      correct:  decodeURIComponent(q.correct_answer),
+    }));
+  } else {
+    const cat = TRIVIA_API_CAT_MAP[catId] || 'general_knowledge';
+    const url = `https://the-trivia-api.com/v2/questions?limit=${amount}&language=fr&categories=${cat}`;
+    const res = await fetch(url);
+    const items = await res.json();
+    if (!Array.isArray(items) || items.length === 0) throw new Error('empty');
+    return items.map(q => ({
+      question: q.question.text,
+      choices:  shuffle([q.correctAnswer, ...q.incorrectAnswers]),
+      correct:  q.correctAnswer,
+    }));
+  }
 }
 
 function showTriviaError(msg) { const e = $('trivia-error-msg'); e.textContent = msg; e.classList.remove('hidden'); }
@@ -708,9 +931,8 @@ function goToTriviaHome() {
 // ── Trivia : thèmes ───────────────────────────────────────────────────────────
 function buildTriviaThemes() {
   const container = $('trivia-themes');
-  if (container.childElementCount > 0) return;
-  container.innerHTML = TRIVIA_CATS.map(c => `
-    <button class="theme-btn" data-id="${c.id}">
+  container.innerHTML = t().triviaCats.map(c => `
+    <button class="theme-btn${selectedTriviaCategories.includes(c.id) ? ' active' : ''}" data-id="${c.id}">
       <span>${c.icon}</span>
       <span>${c.name}</span>
     </button>
@@ -739,23 +961,23 @@ $('input-trivia-name').addEventListener('input', e => {
 $('btn-back-trivia-home').addEventListener('click', () => { clearTriviaError(); showScreen('landing'); });
 
 $('btn-solo-trivia').addEventListener('click', async () => {
-  if (!selectedTriviaCategories.length) { showTriviaError('Choisis au moins un thème pour commencer.'); return; }
+  if (!selectedTriviaCategories.length) { showTriviaError(t().errNoTheme); return; }
   clearTriviaError();
   $('btn-solo-trivia').disabled = true;
-  $('btn-solo-trivia').textContent = '⏳ Chargement…';
+  $('btn-solo-trivia').textContent = t().soloLoading;
   try {
     const perCat = Math.max(2, Math.ceil(10 / selectedTriviaCategories.length));
     const allResults = await Promise.all(selectedTriviaCategories.map(id => fetchTriviaFromCategory(id, perCat)));
     triviaQuestions = shuffle(allResults.flat()).slice(0, 10);
     if (triviaQuestions.length === 0) throw new Error('no questions');
   } catch {
-    showTriviaError('Impossible de charger les questions. Vérifie ta connexion.');
+    showTriviaError(t().errLoadQ);
     $('btn-solo-trivia').disabled = false;
-    $('btn-solo-trivia').textContent = '▶ Solo';
+    $('btn-solo-trivia').textContent = t().btnSolo;
     return;
   }
   $('btn-solo-trivia').disabled = false;
-  $('btn-solo-trivia').textContent = '▶ Solo';
+  $('btn-solo-trivia').textContent = t().btnSolo;
   triviaIsSolo = true; triviaCurrentQ = 0; triviaScore = 0; triviaRoomCode = null;
   $('tg-theme-label').textContent = getCategoryLabel(selectedTriviaCategories);
   $('tg-scores').innerHTML = '';
@@ -765,9 +987,9 @@ $('btn-solo-trivia').addEventListener('click', async () => {
 });
 
 $('btn-create-trivia').addEventListener('click', () => {
-  if (!selectedTriviaCategories.length) { showTriviaError('Choisis au moins un thème pour commencer.'); return; }
+  if (!selectedTriviaCategories.length) { showTriviaError(t().errNoTheme); return; }
   clearTriviaError();
-  socket.emit('create-trivia-room', { categories: selectedTriviaCategories, name: getTriviaName() });
+  socket.emit('create-trivia-room', { categories: selectedTriviaCategories, name: getTriviaName(), lang: currentLang });
 });
 
 $('btn-join-trivia').addEventListener('click',  joinTriviaRoom);
@@ -776,7 +998,7 @@ $('input-trivia-code').addEventListener('input',   e => { e.target.value = e.tar
 
 function joinTriviaRoom() {
   const code = $('input-trivia-code').value.trim().toUpperCase();
-  if (code.length !== 4) { showTriviaError('Entre un code à 4 lettres.'); return; }
+  if (code.length !== 4) { showTriviaError(t().err4Letters); return; }
   clearTriviaError();
   socket.emit('join-trivia-room', { code, name: getTriviaName() });
 }
@@ -784,8 +1006,8 @@ function joinTriviaRoom() {
 // ── Trivia : salle d'attente ──────────────────────────────────────────────────
 $('btn-trivia-copy').addEventListener('click', () => {
   navigator.clipboard.writeText($('trivia-room-code').textContent).then(() => {
-    $('btn-trivia-copy').textContent = 'Copié !';
-    setTimeout(() => { $('btn-trivia-copy').textContent = 'Copier le code'; }, 2000);
+    $('btn-trivia-copy').textContent = t().codeCopied;
+    setTimeout(() => { $('btn-trivia-copy').textContent = t().btnTriviaCopy; }, 2000);
   });
 });
 $('btn-start-trivia').addEventListener('click', () => { socket.emit('start-trivia'); });
@@ -874,7 +1096,7 @@ function showTriviaReveal({ correct, correctSocketIds, scores, myChoice }) {
   if (scores) renderTriviaScores(scores);
   const gotIt = triviaIsSolo ? myChoice === correct
     : (correctSocketIds || []).includes(triviaMySocketId);
-  $('tg-reveal').textContent  = gotIt ? '✅ Bonne réponse !' : `❌ La réponse était : ${correct}`;
+  $('tg-reveal').textContent  = gotIt ? t().triviaCorrect : `${t().triviaWrong}${correct}`;
   $('tg-reveal').className    = `tg-reveal ${gotIt ? 'ok' : 'ko'}`;
 }
 
@@ -930,15 +1152,15 @@ function soloReveal(myChoice) {
 // ── Trivia : classement ───────────────────────────────────────────────────────
 function renderTriviaLeaderboard(data) {
   const list = $('trivia-lb-list');
-  if (!data || data.length === 0) { list.innerHTML = '<p class="lb-empty">Aucune partie jouée pour l\'instant.</p>'; return; }
+  if (!data || data.length === 0) { list.innerHTML = `<p class="lb-empty">${t().triviaLbEmpty}</p>`; return; }
   const medals = ['🥇','🥈','🥉'];
   list.innerHTML = data.map((entry, i) => `
     <div class="lb-row">
       <span class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${medals[i] || i+1}</span>
       <span class="lb-name">${entry.name}</span>
       <div class="lb-stats">
-        <span class="lb-w">${entry.points} pts</span>
-        <span class="lb-d">${entry.games} quiz</span>
+        <span class="lb-w">${entry.points} ${t().triviaLbPts}</span>
+        <span class="lb-d">${entry.games} ${t().triviaLbGames}</span>
       </div>
     </div>
   `).join('');
@@ -947,15 +1169,15 @@ function renderTriviaLeaderboard(data) {
 // ── Overlay déconnexion ───────────────────────────────────────────────────────
 function showReconnectingOverlay() {
   $('dc-icon').textContent  = '⏳';
-  $('dc-title').textContent = 'Connexion interrompue';
-  $('dc-msg').textContent   = "L'adversaire se reconnecte… (30 s)";
+  $('dc-title').textContent = t().dcReconnecting;
+  $('dc-msg').textContent   = t().dcReconnectingMsg;
   $('btn-home').classList.add('hidden');
   $('overlay-disconnect').classList.remove('hidden');
 }
 function showDisconnectedOverlay() {
   $('dc-icon').textContent  = '⚠️';
-  $('dc-title').textContent = 'Adversaire déconnecté';
-  $('dc-msg').textContent   = "L'adversaire a quitté la partie.";
+  $('dc-title').textContent = t().dcDisconnected;
+  $('dc-msg').textContent   = t().dcDisconnectedMsg;
   $('btn-home').classList.remove('hidden');
   $('overlay-disconnect').classList.remove('hidden');
 }
@@ -1057,7 +1279,7 @@ socket.on('room-created', ({ code, gameType }) => {
   currentRoomCode = code;
   currentGame     = gameType;
   $('room-code').textContent     = code;
-  $('waiting-game-name').textContent = GAME_NAMES[gameType];
+  $('waiting-game-name').textContent = t().games[gameType];
   showScreen('waiting');
 });
 
@@ -1067,7 +1289,7 @@ socket.on('game-start', ({ gameType, state, yourPlayer, vsBot, botDifficulty }) 
   applyGameState({ gameType, state, yourPlayer, status: 'playing', winner: null });
   $('chat').classList.toggle('hidden', isBotGame);
   if (isBotGame) {
-    const diffLabel = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' }[botDifficulty] || '';
+    const diffLabel = t().diffLabels[botDifficulty] || '';
     $('label-y').textContent = diffLabel ? `🤖 Robot (${diffLabel})` : '🤖 Robot';
   }
   showScreen('game');
@@ -1130,7 +1352,7 @@ socket.on('player-disconnected', () => {
 
 socket.on('restart-requested', () => {
   if (!$('game-status').classList.contains('hidden')) {
-    $('status-text').textContent += "\nL'adversaire veut rejouer !";
+    $('status-text').textContent += t().restartRequested;
   }
 });
 
@@ -1138,7 +1360,18 @@ socket.on('new-message',       (msg)  => { appendMessage(msg); });
 socket.on('leaderboard-update', (data) => { renderLeaderboard(data); });
 
 socket.on('error', ({ message }) => { showError(message); });
-socket.on('connect_error', () => { showError('Impossible de joindre le serveur. Réessaie.'); });
+socket.on('connect_error', () => { showError(t().errConnect); });
+
+// ── Langue ───────────────────────────────────────────────────────────────────
+$('btn-lang').addEventListener('click', () => {
+  currentLang = currentLang === 'fr' ? 'en' : 'fr';
+  localStorage.setItem('lang', currentLang);
+  applyLang();
+  buildTriviaThemes();
+});
+
+// Init langue au chargement
+applyLang();
 
 // ── Particules ─────────────────────────────────────────────────────────────────
 function spawnParticles(x, y) {
