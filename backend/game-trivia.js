@@ -36,4 +36,10 @@ function fetchQuestions(category, amount = 10) {
   });
 }
 
-module.exports = { fetchQuestions };
+async function fetchQuestionsMulti(categories, totalAmount) {
+  const perCat = Math.max(2, Math.ceil(totalAmount / categories.length));
+  const results = await Promise.all(categories.map(cat => fetchQuestions(cat, perCat)));
+  return shuffle(results.flat()).slice(0, totalAmount);
+}
+
+module.exports = { fetchQuestions, fetchQuestionsMulti };

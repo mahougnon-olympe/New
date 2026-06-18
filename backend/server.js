@@ -108,7 +108,10 @@ async function startTriviaGame(code) {
   const room = triviaRooms.get(code);
   if (!room) return;
   try {
-    room.questions = await triviaGame.fetchQuestions(room.category, room.totalQ);
+    const cats = room.categories || [room.category];
+    room.questions = cats.length === 1
+      ? await triviaGame.fetchQuestions(cats[0], room.totalQ)
+      : await triviaGame.fetchQuestionsMulti(cats, room.totalQ);
   } catch {
     io.to(code).emit('trivia-error', { message: 'Impossible de charger les questions. Réessaie.' });
     room.status = 'waiting';
@@ -397,23 +400,25 @@ io.on('connection', (socket) => {
   });
 
   // ── Trivia : créer un salon ──────────────────────────────────────────────
-  socket.on('create-trivia-room', ({ category, name = '' } = {}) => {
-    const cat = parseInt(category);
-    if (!TRIVIA_CATEGORIES[cat]) return;
+  socket.on('create-trivia-room', ({ categories, name = '' } = {}) => {
+    const cats = [].concat(categories || []).map(c => parseInt(c)).filter(c => TRIVIA_CATEGORIES[c]);
+    if (cats.length === 0) return;
     const playerName = String(name).trim().slice(0, 20) || 'Anonyme';
     const code = generateCode();
     const players = new Map();
     players.set(socket.id, { name: playerName, colorIndex: 0, score: 0 });
+    const catNames = cats.map(c => TRIVIA_CATEGORIES[c]);
+    const categoryName = cats.length <= 2 ? catNames.join(' · ') : `Mix (${cats.length} thèmes)`;
     triviaRooms.set(code, {
-      code, hostId: socket.id, category: cat,
-      categoryName: TRIVIA_CATEGORIES[cat],
+      code, hostId: socket.id, categories: cats,
+      categoryName,
       players, questions: null, currentQ: -1,
       status: 'waiting', answersThisRound: new Map(),
       timer: null, revealTimer: null, totalQ: TRIVIA_Q_COUNT,
     });
     triviaRoomCode = code;
     socket.join(code);
-    socket.emit('trivia-room-created', { code, categoryName: TRIVIA_CATEGORIES[cat], roomState: getTriviaRoomState(triviaRooms.get(code)) });
+    socket.emit('trivia-room-created', { code, categoryName, roomState: getTriviaRoomState(triviaRooms.get(code)) });
   });
 
   // ── Trivia : rejoindre ───────────────────────────────────────────────────
