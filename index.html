@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Puissance 4 — Multijoueur</title>
+  <title>Jeux Multijoueur</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,21 +11,28 @@
   <!-- ── Écran 1 : Accueil ── -->
   <div id="screen-home" class="screen active">
     <div class="logo">
-      <div class="logo-pieces">
-        <span class="piece red"></span>
-        <span class="piece yellow"></span>
-        <span class="piece red"></span>
-        <span class="piece yellow"></span>
-      </div>
-      <h1>Puissance 4</h1>
-      <p class="subtitle">Multijoueur en temps réel</p>
+      <h1>Jeux Multijoueur</h1>
+      <p class="subtitle">2 joueurs • Temps réel</p>
+    </div>
+
+    <div class="game-selector">
+      <button class="game-btn active" data-game="connect4">
+        <span class="game-btn-icon">🔴</span>
+        <span class="game-btn-name">Puissance 4</span>
+      </button>
+      <button class="game-btn" data-game="tictactoe">
+        <span class="game-btn-icon">✕</span>
+        <span class="game-btn-name">Tic Tac Toe</span>
+      </button>
+      <button class="game-btn" data-game="chess">
+        <span class="game-btn-icon">♟</span>
+        <span class="game-btn-name">Échecs</span>
+      </button>
     </div>
 
     <div class="card">
       <button id="btn-create" class="btn btn-primary">Créer une partie</button>
-
-      <div class="divider"><span>ou</span></div>
-
+      <div class="divider"><span>ou rejoindre</span></div>
       <div class="join-group">
         <input
           id="input-code"
@@ -39,15 +46,15 @@
         />
         <button id="btn-join" class="btn btn-secondary">Rejoindre</button>
       </div>
-
       <p id="error-msg" class="error-msg hidden"></p>
     </div>
   </div>
 
-  <!-- ── Écran 2 : Attente adversaire ── -->
+  <!-- ── Écran 2 : Attente ── -->
   <div id="screen-waiting" class="screen">
     <div class="card waiting-card">
       <div class="spinner"></div>
+      <p id="waiting-game-name" class="waiting-game-name"></p>
       <h2>En attente d'un adversaire…</h2>
       <p>Partage ce code :</p>
       <div id="room-code" class="code-display"></div>
@@ -57,28 +64,24 @@
   </div>
 
   <!-- ── Écran 3 : Jeu ── -->
-  <div id="screen-game" class="screen">
+  <div id="screen-game" class="screen game-screen">
 
     <header class="game-header">
       <div class="player-badge" id="badge-r">
-        <span class="piece red small"></span>
-        <span id="label-r">Rouge</span>
+        <span id="badge-r-icon" class="player-icon"></span>
+        <span id="label-r"></span>
       </div>
       <div id="turn-indicator" class="turn-text"></div>
       <div class="player-badge" id="badge-y">
-        <span id="label-y">Jaune</span>
-        <span class="piece yellow small"></span>
+        <span id="label-y"></span>
+        <span id="badge-y-icon" class="player-icon"></span>
       </div>
     </header>
 
-    <main class="board-wrapper">
-      <!-- Arrow buttons to choose a column -->
-      <div id="col-arrows" class="col-arrows"></div>
-      <!-- The 6×7 board -->
-      <div id="board" class="board"></div>
-    </main>
+    <!-- Plateau dynamique (injecté par JS selon le type de jeu) -->
+    <div id="board-area"></div>
 
-    <!-- Status banner (win / draw / restart) -->
+    <!-- Bannière fin de partie -->
     <div id="game-status" class="game-status hidden">
       <p id="status-text" class="status-text"></p>
       <div class="status-actions">
@@ -95,14 +98,8 @@
       </div>
       <div id="chat-messages" class="chat-messages"></div>
       <form id="chat-form" class="chat-form">
-        <input
-          id="chat-input"
-          type="text"
-          placeholder="Envoyer un message…"
-          maxlength="200"
-          autocomplete="off"
-          autocorrect="off"
-        />
+        <input id="chat-input" type="text" placeholder="Envoyer un message…"
+          maxlength="200" autocomplete="off" autocorrect="off" />
         <button type="submit" class="chat-send" aria-label="Envoyer">&#8593;</button>
       </form>
     </section>
@@ -112,10 +109,18 @@
   <!-- ── Overlay : Déconnexion / reconnexion ── -->
   <div id="overlay-disconnect" class="overlay hidden">
     <div class="overlay-box">
-      <div id="dc-icon" class="overlay-icon"></div>
+      <div id="dc-icon"  class="overlay-icon"></div>
       <h2 id="dc-title"></h2>
-      <p id="dc-msg"></p>
+      <p  id="dc-msg"></p>
       <button id="btn-home" class="btn btn-primary hidden">Retour à l'accueil</button>
+    </div>
+  </div>
+
+  <!-- ── Overlay : Promotion du pion (Échecs) ── -->
+  <div id="overlay-promotion" class="overlay hidden">
+    <div class="overlay-box">
+      <h3>Promouvoir le pion</h3>
+      <div id="promo-choices" class="promo-choices"></div>
     </div>
   </div>
 

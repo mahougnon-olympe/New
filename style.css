@@ -5,7 +5,6 @@
   --red:    #e74c3c;
   --yellow: #f1c40f;
   --board:  #1a56db;
-  --board-dark: #1341b0;
   --bg:     #f0f4ff;
   --card:   #ffffff;
   --text:   #1a1a2e;
@@ -13,6 +12,8 @@
   --radius: 16px;
   --shadow: 0 4px 24px rgba(0,0,0,.10);
   --cell:   min(11vw, 56px);
+  --chess-cell: min(10.5vw, 52px);
+  --ttt-cell:   min(26vw, 110px);
 }
 
 html, body {
@@ -27,44 +28,65 @@ html, body {
 .screen {
   display: none;
   min-height: 100dvh;
-  padding: 24px 16px 32px;
+  padding: 20px 16px 32px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: 20px;
 }
 .screen.active { display: flex; }
 
+.game-screen {
+  justify-content: flex-start;
+  padding-top: 12px;
+  gap: 14px;
+}
+
 /* ── Logo ── */
 .logo { text-align: center; }
+h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; color: var(--board); }
+.subtitle { color: var(--muted); margin-top: 4px; font-size: .9rem; }
 
-.logo-pieces {
+/* ── Game selector ── */
+.game-selector {
   display: flex;
-  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 380px;
+}
+
+.game-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 6px;
-  margin-bottom: 12px;
+  padding: 12px 6px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  background: var(--card);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
 }
-
-h1 {
-  font-size: 2rem;
-  font-weight: 800;
-  letter-spacing: -1px;
-  color: var(--board);
+.game-btn.active {
+  border-color: var(--board);
+  background: #e8eeff;
 }
-
-.subtitle { color: var(--muted); margin-top: 4px; }
+.game-btn-icon { font-size: 1.5rem; line-height: 1; }
+.game-btn-name { font-size: .72rem; font-weight: 700; color: var(--muted); }
+.game-btn.active .game-btn-name { color: var(--board); }
 
 /* ── Card ── */
 .card {
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 28px 24px;
+  padding: 24px 20px;
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 /* ── Buttons ── */
@@ -80,11 +102,9 @@ h1 {
   transition: transform .1s, opacity .1s;
 }
 .btn:active { transform: scale(.97); }
-
 .btn-primary   { background: var(--board); color: #fff; }
 .btn-secondary { background: #e8eeff; color: var(--board); }
-
-.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn:disabled  { opacity: .4; cursor: not-allowed; }
 
 /* ── Divider ── */
 .divider {
@@ -95,10 +115,7 @@ h1 {
   font-size: .85rem;
 }
 .divider::before, .divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: #e2e8f0;
+  content: ''; flex: 1; height: 1px; background: #e2e8f0;
 }
 
 /* ── Join input ── */
@@ -120,15 +137,11 @@ h1 {
 #input-code:focus { outline: none; border-color: var(--board); }
 
 /* ── Error ── */
-.error-msg {
-  color: var(--red);
-  font-size: .875rem;
-  text-align: center;
-  font-weight: 500;
-}
+.error-msg { color: var(--red); font-size: .875rem; text-align: center; font-weight: 500; }
 
-/* ── Waiting screen ── */
+/* ── Waiting ── */
 .waiting-card { text-align: center; }
+.waiting-game-name { font-size: .8rem; font-weight: 700; color: var(--board); text-transform: uppercase; letter-spacing: .1em; }
 
 .spinner {
   width: 40px; height: 40px;
@@ -141,21 +154,11 @@ h1 {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .code-display {
-  font-size: 2.5rem;
-  font-weight: 900;
-  letter-spacing: 10px;
-  color: var(--board);
-  background: #e8eeff;
-  border-radius: 10px;
-  padding: 16px;
-  margin: 8px 0;
+  font-size: 2.5rem; font-weight: 900; letter-spacing: 10px;
+  color: var(--board); background: #e8eeff;
+  border-radius: 10px; padding: 16px; margin: 8px 0;
 }
-
-.hint {
-  font-size: .8rem;
-  color: var(--muted);
-  line-height: 1.5;
-}
+.hint { font-size: .8rem; color: var(--muted); line-height: 1.5; }
 
 /* ── Game header ── */
 .game-header {
@@ -163,69 +166,47 @@ h1 {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: calc(var(--cell) * 7 + 12px);
-  padding: 12px 0;
+  max-width: 420px;
+  padding: 4px 0;
 }
-
 .player-badge {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: .85rem;
+  gap: 5px;
+  font-size: .82rem;
   font-weight: 600;
   color: var(--muted);
-  padding: 6px 10px;
+  padding: 5px 8px;
   border-radius: 8px;
   transition: background .2s, color .2s;
 }
+.player-badge.active { background: #e8eeff; color: var(--board); }
+.player-badge.you::after { content: ' (moi)'; font-weight: 400; opacity: .7; }
+.player-icon { font-size: 1rem; }
+.turn-text { font-size: .78rem; font-weight: 600; color: var(--muted); text-align: center; }
 
-.player-badge.active {
-  background: #e8eeff;
-  color: var(--board);
-}
+/* ── Board area ── */
+#board-area { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 6px; }
 
-.player-badge.you::after {
-  content: ' (moi)';
-  font-weight: 400;
-  opacity: .7;
-}
-
-.turn-text {
-  font-size: .8rem;
-  font-weight: 600;
-  color: var(--muted);
-  text-align: center;
-}
-
-/* ── Board ── */
-.board-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
+/* ══════════════════════════════════════════
+   PUISSANCE 4
+══════════════════════════════════════════ */
 .col-arrows {
   display: grid;
   grid-template-columns: repeat(7, var(--cell));
   gap: 3px;
 }
-
 .col-btn {
-  height: 36px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 1.1rem;
-  color: var(--board);
-  border-radius: 8px;
-  transition: background .15s;
+  height: 34px;
+  border: none; background: transparent;
+  cursor: pointer; font-size: 1rem; color: var(--board);
+  border-radius: 8px; transition: background .15s;
 }
 .col-btn:hover  { background: #dce7ff; }
 .col-btn:active { background: #c5d7ff; }
 .col-btn:disabled { color: #ccc; cursor: not-allowed; }
 
-.board {
+.c4-board {
   display: grid;
   grid-template-columns: repeat(7, var(--cell));
   grid-template-rows:    repeat(6, var(--cell));
@@ -235,25 +216,131 @@ h1 {
   border-radius: 14px;
   box-shadow: 0 6px 32px rgba(26,86,219,.35);
 }
+.c4-cell { border-radius: 50%; background: var(--bg); transition: background .18s; }
+.c4-cell.red    { background: var(--red);    animation: drop .18s ease-out; }
+.c4-cell.yellow { background: var(--yellow); animation: drop .18s ease-out; }
+.c4-cell.win    { box-shadow: 0 0 0 3px #fff inset; }
 
-/* ── Cells ── */
-.cell {
-  border-radius: 50%;
-  background: var(--bg);
-  transition: background .18s;
-}
-
-.cell.red    { background: var(--red); }
-.cell.yellow { background: var(--yellow); }
-
-/* Drop animation */
 @keyframes drop {
   from { transform: translateY(-40px); opacity: 0; }
   to   { transform: translateY(0);     opacity: 1; }
 }
-.cell.red, .cell.yellow { animation: drop .18s ease-out; }
 
-/* ── Pieces (decorative) ── */
+/* ══════════════════════════════════════════
+   TIC TAC TOE
+══════════════════════════════════════════ */
+.ttt-board {
+  display: grid;
+  grid-template-columns: repeat(3, var(--ttt-cell));
+  grid-template-rows:    repeat(3, var(--ttt-cell));
+  gap: 0;
+  background: var(--board);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 32px rgba(26,86,219,.35);
+}
+.ttt-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--ttt-cell) * .52);
+  font-weight: 900;
+  cursor: pointer;
+  background: var(--card);
+  border: 3px solid var(--board);
+  transition: background .15s;
+  user-select: none;
+  line-height: 1;
+}
+.ttt-cell:hover:not(.played) { background: #eef2ff; }
+.ttt-cell.played   { cursor: default; }
+.ttt-cell.ttt-r    { color: var(--red); }
+.ttt-cell.ttt-y    { color: #d4a000; }
+.ttt-cell.win-cell { background: #e8eeff; }
+
+/* ══════════════════════════════════════════
+   ÉCHECS
+══════════════════════════════════════════ */
+.chess-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.chess-coords-row {
+  display: grid;
+  grid-template-columns: 16px repeat(8, var(--chess-cell)) 16px;
+  width: calc(var(--chess-cell) * 8 + 32px);
+}
+.chess-coord { font-size: .6rem; color: var(--muted); display: flex; align-items: center; justify-content: center; }
+
+.chess-rank-col {
+  display: grid;
+  grid-template-rows: repeat(8, var(--chess-cell));
+}
+
+.chess-board-row {
+  display: grid;
+  grid-template-columns: 16px calc(var(--chess-cell) * 8) 16px;
+  align-items: center;
+}
+
+.chess-board {
+  display: grid;
+  grid-template-columns: repeat(8, var(--chess-cell));
+  grid-template-rows:    repeat(8, var(--chess-cell));
+  border: 2px solid #8b6914;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 6px 32px rgba(0,0,0,.2);
+}
+.chess-sq {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--chess-cell) * .72);
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  transition: background-color .1s;
+}
+.chess-sq.light { background: #f0d9b5; }
+.chess-sq.dark  { background: #b58863; }
+
+/* Pièce sélectionnée */
+.chess-sq.selected.light { background: #7fc97f; }
+.chess-sq.selected.dark  { background: #5aa85a; }
+
+/* Cases cibles (déplacements légaux) */
+.chess-sq.can-move::after {
+  content: '';
+  position: absolute;
+  width: 28%;
+  height: 28%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .25);
+  pointer-events: none;
+}
+/* Case cible occupée (capture) → anneau */
+.chess-sq.can-move.has-piece::after {
+  width: 88%;
+  height: 88%;
+  background: transparent;
+  border: 4px solid rgba(0, 0, 0, .25);
+  border-radius: 50%;
+}
+
+/* Roi en échec */
+.chess-sq.in-check { background: #e05252 !important; }
+
+/* Dernier coup joué */
+.chess-sq.last-move.light { background: #cdd56a; }
+.chess-sq.last-move.dark  { background: #aaa23a; }
+
+/* ══════════════════════════════════════════
+   PIÈCES DÉCORATIVES (accueil / badges)
+══════════════════════════════════════════ */
 .piece {
   display: inline-block;
   width: 28px; height: 28px;
@@ -266,64 +353,23 @@ h1 {
 /* ── Game status banner ── */
 .game-status {
   width: 100%;
-  max-width: calc(var(--cell) * 7 + 12px);
+  max-width: 420px;
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 20px;
+  padding: 18px;
   text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.status-text {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.status-actions { display: flex; flex-direction: column; gap: 10px; }
-
-/* ── Overlay ── */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  z-index: 100;
-}
-
-.overlay-box {
-  background: var(--card);
-  border-radius: var(--radius);
-  padding: 32px 24px;
-  text-align: center;
-  max-width: 320px;
-  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-
-.overlay-icon { font-size: 2.5rem; }
-
-/* ── Utilities ── */
-.hidden { display: none !important; }
-
-/* ── Highlight winning cells ── */
-.cell.win {
-  box-shadow: 0 0 0 3px #fff inset;
-  animation: none;
-}
+.status-text { font-size: 1.1rem; font-weight: 700; }
+.status-actions { display: flex; flex-direction: column; gap: 10px; }
 
 /* ── Chat ── */
 .chat {
   width: 100%;
-  max-width: calc(var(--cell) * 7 + 12px);
+  max-width: 420px;
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -331,118 +377,88 @@ h1 {
   flex-direction: column;
   overflow: hidden;
 }
-
 .chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
   padding: 10px 12px 0;
 }
-
-.chat-title {
-  font-size: .8rem;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .05em;
-}
-
-.chat-clear {
-  border: none;
-  background: none;
-  color: var(--muted);
-  font-size: .75rem;
-  cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 6px;
-  transition: background .15s, color .15s;
-}
+.chat-title { font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.chat-clear { border: none; background: none; color: var(--muted); font-size: .75rem; cursor: pointer; padding: 2px 6px; border-radius: 6px; transition: background .15s, color .15s; }
 .chat-clear:hover { background: #f0f4ff; color: var(--red); }
 
 .chat-messages {
-  flex: 1;
-  height: 180px;
+  height: 160px;
   overflow-y: auto;
-  padding: 12px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   scroll-behavior: smooth;
 }
-
-/* Empty state */
 .chat-messages:empty::before {
   content: 'Aucun message pour l\'instant…';
-  color: var(--muted);
-  font-size: .8rem;
-  text-align: center;
-  margin: auto;
+  color: var(--muted); font-size: .8rem; text-align: center; margin: auto;
 }
 
-.msg {
-  display: flex;
-  flex-direction: column;
-  max-width: 80%;
-}
-
-.msg-mine    { align-self: flex-end;  align-items: flex-end; }
-.msg-theirs  { align-self: flex-start; align-items: flex-start; }
-
-.msg-bubble {
-  padding: 8px 12px;
-  border-radius: 14px;
-  font-size: .9rem;
-  line-height: 1.4;
-  word-break: break-word;
-}
-
+.msg { display: flex; flex-direction: column; max-width: 80%; }
+.msg-mine   { align-self: flex-end;   align-items: flex-end; }
+.msg-theirs { align-self: flex-start; align-items: flex-start; }
+.msg-bubble { padding: 7px 11px; border-radius: 14px; font-size: .88rem; line-height: 1.4; word-break: break-word; }
 .msg-mine   .msg-bubble { background: var(--board); color: #fff; border-bottom-right-radius: 4px; }
-.msg-theirs .msg-bubble { background: #f0f4ff;      color: var(--text); border-bottom-left-radius: 4px; }
+.msg-theirs .msg-bubble { background: #f0f4ff; color: var(--text); border-bottom-left-radius: 4px; }
+.msg-meta { font-size: .7rem; color: var(--muted); margin-top: 2px; padding: 0 4px; }
 
-.msg-meta {
-  font-size: .7rem;
-  color: var(--muted);
-  margin-top: 2px;
-  padding: 0 4px;
-}
-
-/* Input row */
-.chat-form {
-  display: flex;
-  border-top: 1px solid #e2e8f0;
-  padding: 8px;
-  gap: 8px;
-}
-
+.chat-form { display: flex; border-top: 1px solid #e2e8f0; padding: 8px; gap: 8px; }
 #chat-input {
   flex: 1;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: .9rem;
-  background: var(--bg);
-  color: var(--text);
+  border: 1.5px solid #e2e8f0; border-radius: 8px;
+  padding: 9px 11px; font-size: .88rem;
+  background: var(--bg); color: var(--text);
   transition: border-color .2s;
 }
 #chat-input:focus { outline: none; border-color: var(--board); }
-
 .chat-send {
-  width: 40px; height: 40px;
-  flex-shrink: 0;
-  border: none;
-  border-radius: 8px;
-  background: var(--board);
-  color: #fff;
-  font-size: 1.1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity .15s;
+  width: 38px; height: 38px; flex-shrink: 0;
+  border: none; border-radius: 8px;
+  background: var(--board); color: #fff;
+  font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
 }
 .chat-send:active { opacity: .75; }
 
-/* ── Responsive tweak for very small screens ── */
+/* ── Overlays ── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; z-index: 100;
+}
+.overlay-box {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 28px 22px;
+  text-align: center;
+  max-width: 320px; width: 100%;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.overlay-icon { font-size: 2.5rem; }
+
+/* Promotion pion */
+.promo-choices { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.promo-btn {
+  width: 66px; height: 66px;
+  border: 2px solid #e2e8f0; border-radius: 12px;
+  background: var(--card); font-size: 2rem;
+  cursor: pointer; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  transition: border-color .15s, background .15s;
+}
+.promo-btn:hover { border-color: var(--board); background: #e8eeff; }
+.promo-btn span  { font-size: .6rem; color: var(--muted); }
+
+/* ── Utilities ── */
+.hidden { display: none !important; }
+
+/* ── Responsive ── */
 @media (max-width: 340px) {
-  :root { --cell: 9.5vw; }
+  :root { --cell: 9.5vw; --chess-cell: 9.5vw; --ttt-cell: 24vw; }
 }
