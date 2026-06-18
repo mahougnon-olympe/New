@@ -630,6 +630,9 @@ $('btn-home').addEventListener('click', goToHome);
 $('btn-help').addEventListener('click', () => {
   $('overlay-help').classList.remove('hidden');
 });
+document.getElementById('btn-help-game').addEventListener('click', () => {
+  $('overlay-help').classList.remove('hidden');
+});
 $('btn-help-close').addEventListener('click', () => {
   $('overlay-help').classList.add('hidden');
 });

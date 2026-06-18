@@ -537,11 +537,35 @@ h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; color: var(--boa
 .btn-help-float:hover  { box-shadow: 0 6px 18px rgba(26,86,219,.55); }
 .btn-help-float:active { transform: scale(.92); }
 
-/* Sur mobile, remonter le bouton au-dessus du formulaire de chat */
+/* Bouton aide inline (sous le chat, mobile uniquement) */
+.btn-help-inline {
+  display: none;
+}
+
 @media (max-width: 600px) {
-  .screen.game-screen.active ~ .btn-help-float {
-    bottom: 92px;
+  /* Masquer le bouton flottant fixe dans l'écran de jeu */
+  .screen.game-screen.active ~ .btn-help-float { display: none; }
+
+  /* Afficher le bouton inline sous le chat */
+  .btn-help-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: var(--board);
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(26,86,219,.35);
+    margin: 4px auto 0;
+    transition: transform .15s, box-shadow .15s;
   }
+  .btn-help-inline:active { transform: scale(.92); }
 }
 
 /* ── Modale aide ── */
