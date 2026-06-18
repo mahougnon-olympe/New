@@ -1422,8 +1422,9 @@ document.addEventListener('click', e => {
 const cursorSnake = (() => {
   const MAX = 18, MIN = 4, GAP = 13, HEAD_SZ = 12, TAIL_SZ = 5;
   let segs = [], mx = -999, my = -999, curHue = 140;
+  let enabled = localStorage.getItem('snakeEnabled') !== 'false';
+  let pendingLen = MIN, pendingRank = 0;
 
-  // Couleur selon rang : or / argent / bronze / vert
   function hueFor(rank) {
     return rank === 1 ? 48 : rank === 2 ? 205 : rank === 3 ? 22 : 140;
   }
@@ -1432,6 +1433,7 @@ const cursorSnake = (() => {
     segs.forEach(s => s.el.remove());
     segs = [];
     curHue = h;
+    if (!enabled) return;
     for (let i = 0; i < len; i++) {
       const p  = len > 1 ? i / (len - 1) : 0;
       const sz = HEAD_SZ - p * (HEAD_SZ - TAIL_SZ);
@@ -1455,11 +1457,8 @@ const cursorSnake = (() => {
 
   (function tick() {
     if (segs.length) {
-      // Tête suit la souris avec un léger lissage
       segs[0].x += (mx - segs[0].x) * 0.18;
       segs[0].y += (my - segs[0].y) * 0.18;
-
-      // Chaque segment maintient une distance fixe avec le précédent
       for (let i = 1; i < segs.length; i++) {
         const pr = segs[i - 1], cu = segs[i];
         const dx = pr.x - cu.x, dy = pr.y - cu.y;
@@ -1473,14 +1472,39 @@ const cursorSnake = (() => {
 
   build(MIN, curHue);
 
+  // Met à jour le bouton flottant pour refléter l'état
+  function syncBtn() {
+    const btn = document.getElementById('btn-snake-toggle');
+    if (btn) btn.classList.toggle('off', !enabled);
+  }
+  syncBtn();
+
   return {
     update(len, rank) {
+      pendingLen = len; pendingRank = rank;
+      if (!enabled) return;
       const h = hueFor(rank);
       const n = Math.min(MAX, Math.max(MIN, len));
       if (n !== segs.length || h !== curHue) build(n, h);
-    }
+    },
+    toggle() {
+      enabled = !enabled;
+      localStorage.setItem('snakeEnabled', enabled);
+      if (enabled) {
+        build(Math.min(MAX, Math.max(MIN, pendingLen)), hueFor(pendingRank));
+      } else {
+        segs.forEach(s => s.el.remove());
+        segs = [];
+      }
+      syncBtn();
+      return enabled;
+    },
   };
 })();
+
+document.getElementById('btn-snake-toggle').addEventListener('click', () => {
+  cursorSnake.toggle();
+});
 
 // ── Pluie d'émojis au chargement ──────────────────────────────────────────────
 (() => {
