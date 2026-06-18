@@ -4,6 +4,7 @@ let gameActive      = false;
 let currentRoomCode = null;
 let currentGame     = null;   // 'connect4' | 'tictactoe' | 'chess'
 let selectedGameType = 'connect4';
+let isBotGame = false;
 let currentTurnPlayer = null;
 
 // État échecs
@@ -91,6 +92,11 @@ document.querySelectorAll('.game-btn').forEach(btn => {
 });
 
 // ── Accueil ──────────────────────────────────────────────────────────────────
+$('btn-bot').addEventListener('click', () => {
+  clearError();
+  socket.emit('create-room', { gameType: selectedGameType, name: getPlayerName(), vsBot: true });
+});
+
 $('btn-create').addEventListener('click', () => {
   clearError();
   socket.emit('create-room', { gameType: selectedGameType, name: getPlayerName() });
@@ -140,7 +146,7 @@ function setPlayerBadges(gameType, yourPlayer) {
 function updateTurnUI(currentPlayer, gameType) {
   currentTurnPlayer = currentPlayer;
   const isMyTurn = currentPlayer === myPlayer;
-  $('turn-indicator').textContent = isMyTurn ? 'Ton tour' : 'Adversaire joue…';
+  $('turn-indicator').textContent = isMyTurn ? 'Ton tour' : (isBotGame ? '🤖 Robot réfléchit…' : 'Adversaire joue…');
   $('badge-r').classList.toggle('active', currentPlayer === 'R');
   $('badge-y').classList.toggle('active', currentPlayer === 'Y');
 
@@ -157,6 +163,7 @@ function goToHome() {
 
   myPlayer = null;
   gameActive = false;
+  isBotGame = false;
   currentRoomCode = null;
   currentGame = null;
   currentTurnPlayer = null;
@@ -577,8 +584,10 @@ function showPromoModal(player) {
 // ── Rejouer ───────────────────────────────────────────────────────────────────
 $('btn-restart').addEventListener('click', () => {
   socket.emit('request-restart');
-  $('btn-restart').disabled = true;
-  $('restart-pending').classList.remove('hidden');
+  if (!isBotGame) {
+    $('btn-restart').disabled = true;
+    $('restart-pending').classList.remove('hidden');
+  }
 });
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
@@ -1050,9 +1059,12 @@ socket.on('room-created', ({ code, gameType }) => {
   showScreen('waiting');
 });
 
-socket.on('game-start', ({ gameType, state, yourPlayer }) => {
+socket.on('game-start', ({ gameType, state, yourPlayer, vsBot }) => {
+  isBotGame = !!vsBot;
   saveSession(currentRoomCode, yourPlayer);
   applyGameState({ gameType, state, yourPlayer, status: 'playing', winner: null });
+  $('chat').classList.toggle('hidden', isBotGame);
+  if (isBotGame) $('label-y').textContent = '🤖 Robot';
   showScreen('game');
 });
 

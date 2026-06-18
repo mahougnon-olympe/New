@@ -7,6 +7,7 @@ const connect4   = require('./game');
 const tictactoe  = require('./game-tictactoe');
 const chessGame  = require('./game-chess');
 const triviaGame = require('./game-trivia');
+const bots       = require('./game-bots');
 
 const app = express();
 const server = http.createServer(app);
@@ -217,6 +218,57 @@ function finishTriviaGame(code) {
   setTimeout(() => triviaRooms.delete(code), 60_000);
 }
 
+// ── Bot : calcule et joue le coup du robot ─────────────────────────────────
+
+function scheduleBotMove(code) {
+  setTimeout(() => {
+    const room = rooms.get(code);
+    if (!room || !room.vsBot || room.status !== 'playing') return;
+    if (room.state.currentPlayer !== 'Y') return;
+
+    let newState, status, winner;
+
+    switch (room.gameType) {
+      case 'tictactoe': {
+        const cell = bots.botMoveTTT(room.state.board);
+        if (cell === -1) return;
+        const res = tictactoe.applyMove(room.state, cell);
+        if (!res) return;
+        newState = { board: res.board, currentPlayer: res.currentPlayer, winLine: res.winLine };
+        status = res.status; winner = res.winner;
+        break;
+      }
+      case 'connect4': {
+        const col = bots.botMoveConnect4(room.state.board);
+        if (col === -1) return;
+        const board = room.state.board.map(r => [...r]);
+        const row   = connect4.dropPiece(board, col, 'Y');
+        if (row === -1) return;
+        status = 'playing'; winner = null;
+        if (connect4.checkWin(board, row, col, 'Y')) { status = 'won'; winner = 'Y'; }
+        else if (connect4.checkDraw(board))           { status = 'draw'; }
+        newState = { board, currentPlayer: status === 'playing' ? 'R' : 'Y' };
+        break;
+      }
+      case 'chess': {
+        const move = bots.botMoveChess(room.state.fen);
+        if (!move) return;
+        const res = chessGame.applyMove(room.state, move);
+        if (!res) return;
+        newState = { fen: res.fen, currentPlayer: res.currentPlayer, isCheck: res.isCheck };
+        status = res.status; winner = res.winner;
+        break;
+      }
+      default: return;
+    }
+
+    room.state  = newState;
+    room.status = status;
+    room.winner = winner;
+    io.to(code).emit('game-update', { gameType: room.gameType, state: newState, status, winner });
+  }, 700);
+}
+
 // ── Socket ─────────────────────────────────────────────────────────────────
 
 io.on('connection', (socket) => {
@@ -225,7 +277,7 @@ io.on('connection', (socket) => {
   let triviaRoomCode = null;
 
   // ── Créer une room ──────────────────────────────────────────────────────
-  socket.on('create-room', ({ gameType = 'connect4', name = '' } = {}) => {
+  socket.on('create-room', ({ gameType = 'connect4', name = '', vsBot = false } = {}) => {
     if (!VALID_GAMES.has(gameType)) return;
     const playerName = String(name).trim().slice(0, 20) || 'Anonyme';
 
@@ -234,9 +286,10 @@ io.on('connection', (socket) => {
       code,
       gameType,
       state: createInitialState(gameType),
-      players: { R: socket.id, Y: null },
-      playerNames: { R: playerName, Y: null },
-      status: 'waiting',
+      players:     { R: socket.id, Y: vsBot ? 'bot' : null },
+      playerNames: { R: playerName, Y: vsBot ? '🤖 Robot' : null },
+      status: vsBot ? 'playing' : 'waiting',
+      vsBot,
       winner: null,
       restartVotes: new Set(),
       reconnectTimers: { R: null, Y: null },
@@ -245,7 +298,12 @@ io.on('connection', (socket) => {
     roomCode = code;
     myPlayer = 'R';
     socket.join(code);
-    socket.emit('room-created', { code, gameType });
+
+    if (vsBot) {
+      socket.emit('game-start', { gameType, state: createInitialState(gameType), yourPlayer: 'R', vsBot: true });
+    } else {
+      socket.emit('room-created', { code, gameType });
+    }
   });
 
   // ── Rejoindre une room ──────────────────────────────────────────────────
@@ -361,15 +419,19 @@ io.on('connection', (socket) => {
     io.to(roomCode).emit('game-update', { gameType: room.gameType, state: newState, status, winner });
 
     if (status !== 'playing') {
-      if (status === 'won') {
-        const loserRole = winner === 'R' ? 'Y' : 'R';
-        updateLeaderboard(room.playerNames[winner], 'win');
-        updateLeaderboard(room.playerNames[loserRole], 'loss');
-      } else {
-        updateLeaderboard(room.playerNames.R, 'draw');
-        updateLeaderboard(room.playerNames.Y, 'draw');
+      if (!room.vsBot) {
+        if (status === 'won') {
+          const loserRole = winner === 'R' ? 'Y' : 'R';
+          updateLeaderboard(room.playerNames[winner], 'win');
+          updateLeaderboard(room.playerNames[loserRole], 'loss');
+        } else {
+          updateLeaderboard(room.playerNames.R, 'draw');
+          updateLeaderboard(room.playerNames.Y, 'draw');
+        }
+        io.emit('leaderboard-update', getLeaderboardData());
       }
-      io.emit('leaderboard-update', getLeaderboardData());
+    } else if (room.vsBot) {
+      scheduleBotMove(roomCode);
     }
   });
 
@@ -387,6 +449,14 @@ io.on('connection', (socket) => {
   socket.on('request-restart', () => {
     const room = rooms.get(roomCode);
     if (!room || (room.status !== 'won' && room.status !== 'draw')) return;
+
+    if (room.vsBot) {
+      room.state  = createInitialState(room.gameType);
+      room.status = 'playing';
+      room.winner = null;
+      socket.emit('game-start', { gameType: room.gameType, state: room.state, yourPlayer: 'R', vsBot: true });
+      return;
+    }
 
     room.restartVotes.add(socket.id);
 
