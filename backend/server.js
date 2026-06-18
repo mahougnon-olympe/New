@@ -433,6 +433,17 @@ io.on('connection', (socket) => {
           updateLeaderboard(room.playerNames.Y, 'draw');
         }
         io.emit('leaderboard-update', getLeaderboardData());
+      } else if (['medium', 'hard'].includes(room.botDifficulty)) {
+        // Solo vs bot (moyen/difficile) : enregistrer uniquement le joueur humain
+        const humanName = room.playerNames.R;
+        if (humanName) {
+          if (status === 'won') {
+            updateLeaderboard(humanName, winner === 'R' ? 'win' : 'loss');
+          } else {
+            updateLeaderboard(humanName, 'draw');
+          }
+          io.emit('leaderboard-update', getLeaderboardData());
+        }
       }
     } else if (room.vsBot) {
       scheduleBotMove(roomCode);
