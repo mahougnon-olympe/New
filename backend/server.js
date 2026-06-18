@@ -268,6 +268,18 @@ function scheduleBotMove(code) {
     room.status = status;
     room.winner = winner;
     io.to(code).emit('game-update', { gameType: room.gameType, state: newState, status, winner });
+
+    if (status !== 'playing' && ['medium', 'hard'].includes(room.botDifficulty)) {
+      const humanName = room.playerNames.R;
+      if (humanName) {
+        if (status === 'won') {
+          updateLeaderboard(humanName, winner === 'R' ? 'win' : 'loss');
+        } else {
+          updateLeaderboard(humanName, 'draw');
+        }
+        io.emit('leaderboard-update', getLeaderboardData());
+      }
+    }
   }, 700);
 }
 
