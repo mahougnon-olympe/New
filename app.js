@@ -108,6 +108,31 @@ function updateTurnUI(currentPlayer, gameType) {
   // Chess : géré par selectedSquare + clic
 }
 
+// ── Retour au menu principal ──────────────────────────────────────────────────
+function goToHome() {
+  socket.emit('leave-room');
+  clearSession();
+
+  myPlayer = null;
+  gameActive = false;
+  currentRoomCode = null;
+  currentGame = null;
+  currentTurnPlayer = null;
+  selectedSquare = null;
+  availableMoves = [];
+  currentFen = null;
+  lastMove = null;
+  pendingPromoMove = null;
+
+  $('board-area').innerHTML = '';
+  $('game-status').classList.add('hidden');
+  $('overlay-disconnect').classList.add('hidden');
+  $('overlay-promotion').classList.add('hidden');
+  clearChat();
+  clearError();
+  showScreen('home');
+}
+
 // ── Fin de partie ─────────────────────────────────────────────────────────────
 function showGameOver(status, winner) {
   gameActive = false;
@@ -124,6 +149,7 @@ function showGameOver(status, winner) {
   $('btn-restart').classList.remove('hidden');
   $('btn-restart').disabled = false;
   $('restart-pending').classList.add('hidden');
+  $('btn-menu').classList.remove('hidden');
 }
 
 // ── Appliquer l'état de jeu (game-start / reconnect-success) ─────────────────
@@ -138,6 +164,7 @@ function applyGameState({ gameType, state, yourPlayer, status, winner }) {
   $('btn-restart').classList.remove('hidden');
   $('btn-restart').disabled = false;
   $('restart-pending').classList.add('hidden');
+  $('btn-menu').classList.add('hidden');
 
   clearChat();
   buildGameBoard(gameType, state, yourPlayer);
@@ -567,7 +594,8 @@ function showDisconnectedOverlay() {
 }
 function hideOverlay() { $('overlay-disconnect').classList.add('hidden'); }
 
-$('btn-home').addEventListener('click', () => { clearSession(); location.reload(); });
+$('btn-home').addEventListener('click', goToHome);
+$('btn-menu').addEventListener('click', goToHome);
 
 // ── Événements Socket.IO ──────────────────────────────────────────────────────
 

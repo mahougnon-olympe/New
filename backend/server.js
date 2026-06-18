@@ -209,6 +209,26 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ── Quitter la room (retour menu) ───────────────────────────────────────
+  socket.on('leave-room', () => {
+    const room = rooms.get(roomCode);
+    if (!room) return;
+    if (room.players[myPlayer] !== socket.id) return;
+
+    if (room.reconnectTimers[myPlayer]) {
+      clearTimeout(room.reconnectTimers[myPlayer]);
+      room.reconnectTimers[myPlayer] = null;
+    }
+
+    const other = myPlayer === 'R' ? 'Y' : 'R';
+    if (room.status !== 'waiting' && room.players[other]) {
+      io.to(room.players[other]).emit('player-disconnected');
+    }
+    rooms.delete(roomCode);
+    roomCode = null;
+    myPlayer = null;
+  });
+
   // ── Chat ─────────────────────────────────────────────────────────────────
   socket.on('send-message', ({ text }) => {
     const room = rooms.get(roomCode);
