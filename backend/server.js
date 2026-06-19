@@ -1,8 +1,9 @@
-const express = require('express');
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+const express    = require('express');
+const http       = require('http');
+const fs         = require('fs');
+const path       = require('path');
 const { Server } = require('socket.io');
+const nodemailer = require('nodemailer');
 const connect4   = require('./game');
 const tictactoe  = require('./game-tictactoe');
 const chessGame  = require('./game-chess');
@@ -10,6 +11,7 @@ const triviaGame = require('./game-trivia');
 const bots       = require('./game-bots');
 
 const app = express();
+app.use(express.json());
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
@@ -725,6 +727,65 @@ io.on('connection', (socket) => {
 });
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+// ── Commentaires joueurs → email ────────────────────────────────────────────
+const commentRateMap = new Map(); // ip → [timestamps]
+
+function createTransporter() {
+  return nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.MAIL_USER,
+      pass: process.env.MAIL_PASS,
+    },
+  });
+}
+
+app.post('/api/comment', async (req, res) => {
+  const { pseudo, message } = req.body || {};
+
+  if (!message || typeof message !== 'string' || message.trim().length < 3) {
+    return res.status(400).json({ error: 'Message trop court.' });
+  }
+  if (message.trim().length > 1000) {
+    return res.status(400).json({ error: 'Message trop long (max 1000 caractères).' });
+  }
+
+  // Limite : 3 commentaires par IP par heure
+  const ip  = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const times = (commentRateMap.get(ip) || []).filter(t => now - t < 3600_000);
+  if (times.length >= 3) {
+    return res.status(429).json({ error: 'Limite atteinte. Réessaie dans une heure.' });
+  }
+  times.push(now);
+  commentRateMap.set(ip, times);
+
+  if (!process.env.MAIL_USER || !process.env.MAIL_PASS) {
+    console.log(`[COMMENTAIRE] ${pseudo || 'Anonyme'} : ${message.trim()}`);
+    return res.json({ ok: true });
+  }
+
+  try {
+    await createTransporter().sendMail({
+      from: `"Libero's Multi 🎮" <${process.env.MAIL_USER}>`,
+      to: process.env.MAIL_TO || process.env.MAIL_USER,
+      subject: `💬 Nouveau commentaire de ${pseudo?.trim() || 'Anonyme'}`,
+      text: `Pseudo : ${pseudo?.trim() || 'Anonyme'}\n\n${message.trim()}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;background:#1e1b4b;color:#e0e7ff;border-radius:12px">
+          <h2 style="color:#818cf8;margin:0 0 16px">💬 Nouveau commentaire</h2>
+          <p style="margin:0 0 8px"><strong>Pseudo :</strong> ${(pseudo?.trim() || 'Anonyme').replace(/</g,'&lt;')}</p>
+          <hr style="border:none;border-top:1px solid #3730a3;margin:14px 0"/>
+          <p style="white-space:pre-wrap;line-height:1.6">${message.trim().replace(/</g,'&lt;')}</p>
+        </div>`,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Erreur envoi email commentaire :', err.message);
+    res.status(500).json({ error: 'Impossible d\'envoyer le message. Réessaie plus tard.' });
+  }
+});
 
 app.get('/admin/reset', (req, res) => {
   const adminKey = process.env.ADMIN_KEY;

@@ -1555,6 +1555,67 @@ document.getElementById('btn-snake-toggle').addEventListener('click', () => {
   setTimeout(() => wrap.remove(), 8500);
 })();
 
+// ── Commentaires joueurs ──────────────────────────────────────────────────────
+(() => {
+  const overlay  = $('overlay-comment');
+  const form     = $('comment-form');
+  const pseudo   = $('comment-pseudo');
+  const message  = $('comment-message');
+  const charsEl  = $('comment-chars');
+  const feedback = $('comment-feedback');
+  const sendBtn  = $('btn-comment-send');
+
+  function openModal() {
+    overlay.classList.remove('hidden');
+    feedback.className = 'comment-feedback hidden';
+    feedback.textContent = '';
+  }
+  function closeModal() { overlay.classList.add('hidden'); }
+
+  $('btn-comment').addEventListener('click', openModal);
+  $('btn-comment-close').addEventListener('click', closeModal);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+  message.addEventListener('input', () => {
+    charsEl.textContent = `${message.value.length} / 1000`;
+  });
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const msg = message.value.trim();
+    if (!msg) return;
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Envoi…';
+    feedback.className = 'comment-feedback hidden';
+
+    try {
+      const res = await fetch('/api/comment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pseudo: pseudo.value.trim(), message: msg }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        feedback.textContent = '✅ Message envoyé ! Merci pour ton retour.';
+        feedback.className = 'comment-feedback ok';
+        form.reset();
+        charsEl.textContent = '0 / 1000';
+        setTimeout(closeModal, 2200);
+      } else {
+        feedback.textContent = `❌ ${data.error || 'Erreur inconnue.'}`;
+        feedback.className = 'comment-feedback err';
+      }
+    } catch {
+      feedback.textContent = '❌ Impossible de contacter le serveur.';
+      feedback.className = 'comment-feedback err';
+    }
+
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'Envoyer ✉️';
+  });
+})();
+
 // ── Tutoriel premiers pas ──────────────────────────────────────────────────────
 (() => {
   const LS_KEY = 'libero_tuto_v2';

@@ -977,6 +977,82 @@ html.light #screen-landing         { background: radial-gradient(ellipse at 50% 
 }
 #theme-clock.visible { opacity: 1; }
 
+/* ── Bouton commentaire flottant ────────────────────────────────────────── */
+.btn-comment-float {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--board);
+  font-size: 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(99,102,241,.5);
+  z-index: 50;
+  transition: transform .15s, box-shadow .15s;
+}
+.btn-comment-float:hover  { box-shadow: 0 0 28px rgba(99,102,241,.8); }
+.btn-comment-float:active { transform: scale(.92); }
+
+/* ── Modal commentaire ──────────────────────────────────────────────────── */
+.comment-modal {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 28px;
+  width: min(440px, 92vw);
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.comment-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.comment-modal-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+.comment-modal-sub   { font-size: .82rem; color: var(--muted); line-height: 1.5; margin: 0; }
+.comment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.comment-form input,
+.comment-form textarea {
+  width: 100%;
+  background: var(--board);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: .9rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color .2s;
+}
+.comment-form input:focus,
+.comment-form textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.comment-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.comment-chars { font-size: .75rem; color: var(--muted); }
+.comment-feedback {
+  font-size: .85rem;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin: 0;
+}
+.comment-feedback.ok  { background: rgba(52,211,153,.12); color: #34d399; }
+.comment-feedback.err { background: rgba(248,113,113,.12); color: #f87171; }
+
 /* ── Tutoriel premiers pas ──────────────────────────────────────────────── */
 .tuto-wrap {
   position: fixed;

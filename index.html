@@ -253,6 +253,42 @@
   <!-- ── Bouton serpent (flottant) ── -->
   <button id="btn-snake-toggle" class="btn-snake-float" title="Activer / Désactiver le serpent">🐍</button>
 
+  <!-- ── Bouton commentaire (flottant) ── -->
+  <button id="btn-comment" class="btn-comment-float" title="Laisser un commentaire">✉️</button>
+
+  <!-- ── Modal : Commentaire ── -->
+  <div id="overlay-comment" class="overlay hidden">
+    <div class="comment-modal">
+      <div class="comment-modal-header">
+        <h2 class="comment-modal-title">💬 Laisser un commentaire</h2>
+        <button id="btn-comment-close" class="help-close-btn">✕</button>
+      </div>
+      <p class="comment-modal-sub">Partage ton avis, une idée ou un bug — le créateur le recevra par mail.</p>
+      <form id="comment-form" class="comment-form" autocomplete="off">
+        <input
+          id="comment-pseudo"
+          type="text"
+          placeholder="Ton pseudo (optionnel)"
+          maxlength="30"
+          autocorrect="off"
+          spellcheck="false"
+        />
+        <textarea
+          id="comment-message"
+          placeholder="Ton message…"
+          maxlength="1000"
+          rows="5"
+          required
+        ></textarea>
+        <div class="comment-form-footer">
+          <span id="comment-chars" class="comment-chars">0 / 1000</span>
+          <button type="submit" id="btn-comment-send" class="btn btn-primary">Envoyer ✉️</button>
+        </div>
+        <p id="comment-feedback" class="comment-feedback hidden"></p>
+      </form>
+    </div>
+  </div>
+
   <!-- ── Tutoriel premiers pas ── -->
   <div id="tuto-wrap" class="tuto-wrap hidden">
     <div id="tuto-bubble" class="tuto-bubble">
