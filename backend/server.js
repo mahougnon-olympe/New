@@ -19,33 +19,63 @@ const triviaRooms     = new Map();
 const triviaLeaderboard = new Map();
 
 // ── Persistance ────────────────────────────────────────────────────────────
-const DATA_FILE = path.join(__dirname, 'data.json');
+const DATA_FILE   = path.join(__dirname, 'data.json');
+const BACKUP_FILE = path.join(require('os').homedir(), '.libero_backup.json');
 let saveTimer = null;
 
+function parseData(raw) {
+  const json = JSON.parse(raw);
+  if (json.leaderboard)       json.leaderboard.forEach(([k, v])       => leaderboard.set(k, v));
+  if (json.triviaLeaderboard) json.triviaLeaderboard.forEach(([k, v]) => triviaLeaderboard.set(k, v));
+}
+
 function loadData() {
-  try {
-    const raw = fs.readFileSync(DATA_FILE, 'utf8');
-    const json = JSON.parse(raw);
-    if (json.leaderboard)       json.leaderboard.forEach(([k, v])       => leaderboard.set(k, v));
-    if (json.triviaLeaderboard) json.triviaLeaderboard.forEach(([k, v]) => triviaLeaderboard.set(k, v));
-    console.log('Classements chargés depuis data.json');
-  } catch {
-    // Premier démarrage : pas encore de fichier
+  // Essaie le fichier principal, sinon le miroir de sauvegarde
+  for (const file of [DATA_FILE, BACKUP_FILE]) {
+    try {
+      const raw = fs.readFileSync(file, 'utf8');
+      parseData(raw);
+      console.log(`Classements chargés depuis ${path.basename(file)}`);
+      return;
+    } catch { /* essaie le suivant */ }
   }
+}
+
+function buildPayload() {
+  return JSON.stringify({
+    leaderboard:       [...leaderboard.entries()],
+    triviaLeaderboard: [...triviaLeaderboard.entries()],
+    savedAt: new Date().toISOString(),
+  }, null, 2);
+}
+
+function saveDataSync() {
+  const data = buildPayload();
+  try { fs.writeFileSync(DATA_FILE,   data); } catch (e) { console.error('Erreur sauvegarde principale :', e); }
+  try { fs.writeFileSync(BACKUP_FILE, data); } catch (e) { console.error('Erreur sauvegarde miroir :', e); }
 }
 
 function saveData() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    const payload = {
-      leaderboard:       [...leaderboard.entries()],
-      triviaLeaderboard: [...triviaLeaderboard.entries()],
-    };
-    fs.writeFile(DATA_FILE, JSON.stringify(payload, null, 2), err => {
-      if (err) console.error('Erreur sauvegarde classements :', err);
-    });
+    const data = buildPayload();
+    fs.writeFile(DATA_FILE,   data, err => { if (err) console.error('Erreur sauvegarde principale :', err); });
+    fs.writeFile(BACKUP_FILE, data, err => { if (err) console.error('Erreur sauvegarde miroir :', err); });
   }, 1000);
 }
+
+// Sauvegarde synchrone à l'arrêt propre du serveur
+function onShutdown(signal) {
+  console.log(`\n${signal} reçu — sauvegarde des classements…`);
+  saveDataSync();
+  console.log('Sauvegarde OK. Arrêt.');
+  process.exit(0);
+}
+process.on('SIGTERM', () => onShutdown('SIGTERM'));
+process.on('SIGINT',  () => onShutdown('SIGINT'));
+
+// Auto-save périodique toutes les 2 minutes
+setInterval(saveDataSync, 2 * 60 * 1000);
 
 loadData();
 
