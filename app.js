@@ -1543,7 +1543,7 @@ document.getElementById('btn-snake-toggle').addEventListener('click', () => {
 
 // ── Tutoriel premiers pas ──────────────────────────────────────────────────────
 (() => {
-  const LS_KEY = 'libero_tuto_v1';
+  const LS_KEY = 'libero_tuto_v2';
 
   function getDone() {
     try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; }
@@ -1554,26 +1554,69 @@ document.getElementById('btn-snake-toggle').addEventListener('click', () => {
   }
   function isDone(id) { return !!getDone()[id]; }
 
-  // Étapes : id, écran déclencheur, texte, sélecteur CSS de l'élément à illuminer
+  // ── Toutes les fonctions du site, écran par écran ─────────────────────────
   const STEPS = [
+    // ── Accueil ──
     {
-      id: 'landing',
+      id: 'landing_cats',
       screen: 'landing',
-      text: '👋 Bienvenue ! Choisis une catégorie pour commencer : <strong>Jeux Classiques</strong> (Puissance 4, Morpion, Échecs) ou <strong>Culture Générale</strong> (quiz).',
+      text: '👋 Bienvenue sur <strong>Libero\'s Multi</strong> ! Le site propose deux sections : <strong>Jeux Classiques</strong> (Puissance 4, Morpion, Échecs) et <strong>Culture Générale</strong> (quiz par thèmes). Clique sur une carte pour commencer.',
       target: '.landing-grid',
     },
     {
-      id: 'classic',
+      id: 'landing_btns',
+      screen: 'landing',
+      text: '⚙️ Trois boutons sont toujours disponibles en bas à droite :<br>🌐 <strong>Langue</strong> — bascule l\'interface FR / EN<br>🐍 <strong>Serpent</strong> — active ou désactive le curseur animé<br>❓ <strong>Aide</strong> — consulte le guide complet à tout moment',
+      target: null,
+    },
+
+    // ── Jeux classiques ──
+    {
+      id: 'home_games',
       screen: 'home',
-      text: '🎮 Entre ton <strong>pseudo</strong> (optionnel), puis : lance une partie contre le <strong>🤖 bot</strong>, <strong>crée</strong> une partie multijoueur, ou <strong>rejoins</strong> un ami avec son code.',
+      text: '🎮 Choisis ton jeu en haut : <strong>Puissance 4</strong>, <strong>Morpion</strong> ou <strong>Échecs</strong>. Le classement est partagé entre les trois jeux.',
+      target: '.game-selector',
+    },
+    {
+      id: 'home_bot',
+      screen: 'home',
+      text: '🤖 <strong>Mode Solo</strong> : joue contre le bot à 3 niveaux de difficulté — Facile, Moyen ou Difficile. Tes victoires et défaites sont comptées dans le classement !',
+      target: '.bot-row',
+    },
+    {
+      id: 'home_multi',
+      screen: 'home',
+      text: '👥 <strong>Mode Multijoueur</strong> : entre ton pseudo (optionnel), puis clique sur <em>Créer une partie</em> pour générer un code, ou entre le code d\'un ami pour le rejoindre.',
       target: '.card',
     },
     {
-      id: 'waiting',
+      id: 'home_lb',
+      screen: 'home',
+      text: '🏆 <strong>Classement</strong> : victoires, défaites et nuls s\'enregistrent automatiquement après chaque partie (bot Moyen / Difficile ou multijoueur).',
+      target: '.lb-card',
+    },
+
+    // ── Salle d'attente ──
+    {
+      id: 'waiting_code',
       screen: 'waiting',
-      text: '📋 <strong>Partage ce code</strong> à 4 lettres avec un ami — la partie démarre automatiquement dès qu\'il rejoint !',
+      text: '📋 <strong>Partage ce code</strong> à 4 lettres avec ton adversaire — par message, WhatsApp, Discord… La partie démarre automatiquement dès qu\'il rejoint !',
       target: '#room-code',
       autoDone: true,
+    },
+
+    // ── Quiz ──
+    {
+      id: 'quiz_themes',
+      screen: 'trivia-home',
+      text: '🧠 <strong>Quiz Culture Générale</strong> : sélectionne un ou plusieurs thèmes (Histoire, Cinéma, Sciences…), puis joue en <strong>Solo</strong> ou crée un <strong>salon multijoueur</strong> à partager avec tes amis.',
+      target: '#trivia-themes',
+    },
+    {
+      id: 'quiz_lb',
+      screen: 'trivia-home',
+      text: '🏆 Le <strong>classement Quiz</strong> est séparé du classement Classique. Les points sont attribués selon ta vitesse de réponse et le nombre de bonnes réponses.',
+      target: '.lb-card',
     },
   ];
 
@@ -1594,9 +1637,10 @@ document.getElementById('btn-snake-toggle').addEventListener('click', () => {
 
   function renderDots(activeId) {
     dotsEl.innerHTML = '';
+    const done = getDone();
     STEPS.forEach(s => {
       const d = document.createElement('div');
-      d.className = 'tuto-dot' + (isDone(s.id) ? ' done' : s.id === activeId ? ' current' : '');
+      d.className = 'tuto-dot' + (done[s.id] ? ' done' : s.id === activeId ? ' current' : '');
       dotsEl.appendChild(d);
     });
   }
@@ -1607,42 +1651,52 @@ document.getElementById('btn-snake-toggle').addEventListener('click', () => {
     textEl.innerHTML = step.text;
     renderDots(step.id);
 
-    // Re-déclenche l'animation d'apparition
     bubble.style.animation = 'none';
     requestAnimationFrame(() => { bubble.style.animation = ''; });
 
     wrap.classList.remove('hidden');
     wrap.classList.add('visible');
 
-    // Illumine l'élément cible
     clearHighlight();
-    const el = document.querySelector(step.target);
-    if (el) { el.classList.add('tuto-highlight'); highlighted = el; }
+    if (step.target) {
+      const el = document.querySelector(step.target);
+      if (el) { el.classList.add('tuto-highlight'); highlighted = el; }
+    }
 
-    // Auto-marquer comme vu après 6 s (ex : écran d'attente)
     clearTimeout(autoTimer);
     if (step.autoDone) {
       autoTimer = setTimeout(() => advance(), 6000);
     }
   }
 
-  function advance() {
-    if (!current) return;
-    clearTimeout(autoTimer);
-    markDone(current.id);
+  function hideBubble() {
     clearHighlight();
     wrap.classList.add('hidden');
     wrap.classList.remove('visible');
     current = null;
   }
 
+  function advance() {
+    if (!current) return;
+    clearTimeout(autoTimer);
+    const screenName = current.screen;
+    markDone(current.id);
+    clearHighlight();
+    current = null;
+
+    // Cherche la prochaine étape non faite sur le même écran
+    const next = STEPS.find(s => s.screen === screenName && !isDone(s.id));
+    if (next) {
+      setTimeout(() => showStep(next), 200);
+    } else {
+      hideBubble();
+    }
+  }
+
   function skipAll() {
     clearTimeout(autoTimer);
     STEPS.forEach(s => markDone(s.id));
-    clearHighlight();
-    wrap.classList.add('hidden');
-    wrap.classList.remove('visible');
-    current = null;
+    hideBubble();
   }
 
   btnOk.addEventListener('click', advance);
@@ -1650,33 +1704,36 @@ document.getElementById('btn-snake-toggle').addEventListener('click', () => {
 
   // Appelé par showScreen() à chaque changement d'écran
   window._tutoOnScreen = function(screenName) {
-    const step = STEPS.find(s => s.screen === screenName);
-    if (step && !isDone(step.id)) {
-      setTimeout(() => showStep(step), 450);
-    } else {
-      // Cache la bulle si on quitte l'écran du step courant
-      if (current && current.screen !== screenName) {
-        clearTimeout(autoTimer);
-        clearHighlight();
-        wrap.classList.add('hidden');
-        wrap.classList.remove('visible');
-        current = null;
-      }
+    // Cache la bulle si on change d'écran
+    if (current && current.screen !== screenName) {
+      clearTimeout(autoTimer);
+      hideBubble();
     }
+    // Montre la première étape non faite pour ce nouvel écran
+    const step = STEPS.find(s => s.screen === screenName && !isDone(s.id));
+    if (step) setTimeout(() => showStep(step), 450);
   };
 
-  // Marque l'étape landing comme faite dès qu'on clique sur une carte
-  document.getElementById('btn-go-classic')?.addEventListener('click', () => markDone('landing'));
-  document.getElementById('btn-go-trivia')?.addEventListener('click',  () => markDone('landing'));
+  // Quitter l'accueil sans lire → marque les étapes landing comme vues
+  document.getElementById('btn-go-classic')?.addEventListener('click', () => {
+    STEPS.filter(s => s.screen === 'landing').forEach(s => markDone(s.id));
+  });
+  document.getElementById('btn-go-trivia')?.addEventListener('click', () => {
+    STEPS.filter(s => s.screen === 'landing').forEach(s => markDone(s.id));
+  });
 
-  // Marque l'étape classic comme faite dès qu'on lance une action
+  // Quitter l'écran home sans lire → marque les étapes home comme vues
   ['btn-create', 'btn-join'].forEach(id => {
-    document.getElementById(id)?.addEventListener('click', () => markDone('classic'));
+    document.getElementById(id)?.addEventListener('click', () => {
+      STEPS.filter(s => s.screen === 'home').forEach(s => markDone(s.id));
+    });
   });
   document.querySelectorAll('.bot-btn').forEach(btn => {
-    btn.addEventListener('click', () => markDone('classic'));
+    btn.addEventListener('click', () => {
+      STEPS.filter(s => s.screen === 'home').forEach(s => markDone(s.id));
+    });
   });
 
-  // Affiche le step de l'écran initial (landing)
+  // Affiche le step initial
   window._tutoOnScreen('landing');
 })();
