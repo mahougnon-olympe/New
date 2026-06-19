@@ -694,7 +694,13 @@ function updateChess(fen, isCheck, currentPlayer) {
     sq.classList.remove('selected', 'can-move', 'has-piece', 'in-check', 'last-move');
 
     // Pièce
-    sq.textContent = piece ? CHESS_UNICODE[piece] : '';
+    sq.innerHTML = '';
+    if (piece) {
+      const sp = document.createElement('span');
+      sp.className = piece === piece.toUpperCase() ? 'cp-w' : 'cp-b';
+      sp.textContent = CHESS_UNICODE[piece];
+      sq.appendChild(sp);
+    }
 
     // Dernier coup
     if (lastMove && (square === lastMove.from || square === lastMove.to)) {
@@ -715,7 +721,7 @@ function updateChess(fen, isCheck, currentPlayer) {
       const el = document.querySelector(`.chess-sq[data-sq="${mv}"]`);
       if (el) {
         el.classList.add('can-move');
-        if (el.textContent) el.classList.add('has-piece');
+        if (el.firstChild) el.classList.add('has-piece');
       }
     });
   }
@@ -778,7 +784,8 @@ function showPromoModal(player) {
   choices.forEach(({ piece, icon, label }) => {
     const btn = document.createElement('button');
     btn.className = 'promo-btn';
-    btn.innerHTML = `${icon}<span>${label}</span>`;
+    const cls = player === 'R' ? 'cp-w' : 'cp-b';
+    btn.innerHTML = `<span class="${cls}">${icon}</span><span>${label}</span>`;
     btn.addEventListener('click', () => {
       $('overlay-promotion').classList.add('hidden');
       if (pendingPromoMove) {
@@ -1167,6 +1174,13 @@ document.querySelectorAll('.help-tab').forEach(tab => {
   });
 });
 $('btn-menu').addEventListener('click', goToHome);
+
+$('btn-quit').addEventListener('click', () => {
+  const msg = gameActive
+    ? 'Quitter en cours de partie ? Tu abandonneras la partie en cours.'
+    : 'Retourner au menu ?';
+  if (confirm(msg)) goToHome();
+});
 
 // ── Événements Socket.IO ──────────────────────────────────────────────────────
 

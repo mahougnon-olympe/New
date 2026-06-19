@@ -279,7 +279,26 @@ h1 {
 }
 .player-badge.you::after { content: ' (moi)'; font-weight: 400; opacity: .7; }
 .player-icon { font-size: 1rem; }
+.game-header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
 .turn-text { font-size: .78rem; font-weight: 600; color: var(--muted); text-align: center; }
+.btn-quit {
+  font-size: .7rem;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(248,113,113,.4);
+  background: rgba(248,113,113,.08);
+  color: #f87171;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, transform .1s;
+  white-space: nowrap;
+}
+.btn-quit:hover  { background: rgba(248,113,113,.18); border-color: rgba(248,113,113,.7); }
+.btn-quit:active { transform: scale(.94); }
 
 /* ── Board area ── */
 #board-area { display: flex; flex-direction: column; align-items: center; width: 100%; gap: 6px; }
@@ -412,6 +431,28 @@ h1 {
 .chess-sq.in-check { background: #e05252 !important; }
 .chess-sq.last-move.light { background: #cdd56a; }
 .chess-sq.last-move.dark  { background: #aaa23a; }
+
+/* Pièces d'échecs — blanc ivoire contouré sombre, noir marine contouré doré */
+.cp-w {
+  color: #f5f0d0;
+  text-shadow:
+    -1px -1px 0 #3a3020,
+     1px -1px 0 #3a3020,
+    -1px  1px 0 #3a3020,
+     1px  1px 0 #3a3020;
+  line-height: 1;
+  display: block;
+}
+.cp-b {
+  color: #1a1040;
+  text-shadow:
+    -1px -1px 0 #c8a840,
+     1px -1px 0 #c8a840,
+    -1px  1px 0 #c8a840,
+     1px  1px 0 #c8a840;
+  line-height: 1;
+  display: block;
+}
 
 /* ══════════════════════════════════════════
    PIÈCES DÉCORATIVES
