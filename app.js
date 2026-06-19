@@ -254,6 +254,7 @@ function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('screen-' + name);
   if (el) el.classList.add('active');
+  if (window._tutoOnScreen) window._tutoOnScreen(name);
 }
 
 // ── Trivia : constantes ───────────────────────────────────────────────────────
@@ -1538,4 +1539,144 @@ document.getElementById('btn-snake-toggle').addEventListener('click', () => {
   }
 
   setTimeout(() => wrap.remove(), 8500);
+})();
+
+// ── Tutoriel premiers pas ──────────────────────────────────────────────────────
+(() => {
+  const LS_KEY = 'libero_tuto_v1';
+
+  function getDone() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; }
+  }
+  function markDone(id) {
+    const d = getDone(); d[id] = true;
+    localStorage.setItem(LS_KEY, JSON.stringify(d));
+  }
+  function isDone(id) { return !!getDone()[id]; }
+
+  // Étapes : id, écran déclencheur, texte, sélecteur CSS de l'élément à illuminer
+  const STEPS = [
+    {
+      id: 'landing',
+      screen: 'landing',
+      text: '👋 Bienvenue ! Choisis une catégorie pour commencer : <strong>Jeux Classiques</strong> (Puissance 4, Morpion, Échecs) ou <strong>Culture Générale</strong> (quiz).',
+      target: '.landing-grid',
+    },
+    {
+      id: 'classic',
+      screen: 'home',
+      text: '🎮 Entre ton <strong>pseudo</strong> (optionnel), puis : lance une partie contre le <strong>🤖 bot</strong>, <strong>crée</strong> une partie multijoueur, ou <strong>rejoins</strong> un ami avec son code.',
+      target: '.card',
+    },
+    {
+      id: 'waiting',
+      screen: 'waiting',
+      text: '📋 <strong>Partage ce code</strong> à 4 lettres avec un ami — la partie démarre automatiquement dès qu\'il rejoint !',
+      target: '#room-code',
+      autoDone: true,
+    },
+  ];
+
+  const wrap   = document.getElementById('tuto-wrap');
+  const bubble = document.getElementById('tuto-bubble');
+  const dotsEl = document.getElementById('tuto-dots');
+  const textEl = document.getElementById('tuto-text');
+  const btnOk  = document.getElementById('tuto-ok');
+  const btnSkip= document.getElementById('tuto-skip');
+
+  let current     = null;
+  let highlighted = null;
+  let autoTimer   = null;
+
+  function clearHighlight() {
+    if (highlighted) { highlighted.classList.remove('tuto-highlight'); highlighted = null; }
+  }
+
+  function renderDots(activeId) {
+    dotsEl.innerHTML = '';
+    STEPS.forEach(s => {
+      const d = document.createElement('div');
+      d.className = 'tuto-dot' + (isDone(s.id) ? ' done' : s.id === activeId ? ' current' : '');
+      dotsEl.appendChild(d);
+    });
+  }
+
+  function showStep(step) {
+    if (isDone(step.id)) return;
+    current = step;
+    textEl.innerHTML = step.text;
+    renderDots(step.id);
+
+    // Re-déclenche l'animation d'apparition
+    bubble.style.animation = 'none';
+    requestAnimationFrame(() => { bubble.style.animation = ''; });
+
+    wrap.classList.remove('hidden');
+    wrap.classList.add('visible');
+
+    // Illumine l'élément cible
+    clearHighlight();
+    const el = document.querySelector(step.target);
+    if (el) { el.classList.add('tuto-highlight'); highlighted = el; }
+
+    // Auto-marquer comme vu après 6 s (ex : écran d'attente)
+    clearTimeout(autoTimer);
+    if (step.autoDone) {
+      autoTimer = setTimeout(() => advance(), 6000);
+    }
+  }
+
+  function advance() {
+    if (!current) return;
+    clearTimeout(autoTimer);
+    markDone(current.id);
+    clearHighlight();
+    wrap.classList.add('hidden');
+    wrap.classList.remove('visible');
+    current = null;
+  }
+
+  function skipAll() {
+    clearTimeout(autoTimer);
+    STEPS.forEach(s => markDone(s.id));
+    clearHighlight();
+    wrap.classList.add('hidden');
+    wrap.classList.remove('visible');
+    current = null;
+  }
+
+  btnOk.addEventListener('click', advance);
+  btnSkip.addEventListener('click', skipAll);
+
+  // Appelé par showScreen() à chaque changement d'écran
+  window._tutoOnScreen = function(screenName) {
+    const step = STEPS.find(s => s.screen === screenName);
+    if (step && !isDone(step.id)) {
+      setTimeout(() => showStep(step), 450);
+    } else {
+      // Cache la bulle si on quitte l'écran du step courant
+      if (current && current.screen !== screenName) {
+        clearTimeout(autoTimer);
+        clearHighlight();
+        wrap.classList.add('hidden');
+        wrap.classList.remove('visible');
+        current = null;
+      }
+    }
+  };
+
+  // Marque l'étape landing comme faite dès qu'on clique sur une carte
+  document.getElementById('btn-go-classic')?.addEventListener('click', () => markDone('landing'));
+  document.getElementById('btn-go-trivia')?.addEventListener('click',  () => markDone('landing'));
+
+  // Marque l'étape classic comme faite dès qu'on lance une action
+  ['btn-create', 'btn-join'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', () => markDone('classic'));
+  });
+  document.querySelectorAll('.bot-btn').forEach(btn => {
+    btn.addEventListener('click', () => markDone('classic'));
+  });
+
+  // Affiche le step de l'écran initial (landing)
+  window._tutoOnScreen('landing');
 })();
