@@ -1590,7 +1590,7 @@ document.getElementById('btn-snake-toggle').addEventListener('click', () => {
     feedback.className = 'comment-feedback hidden';
 
     try {
-      const res = await fetch('/api/comment', {
+      const res = await fetch(`${window.BACKEND_URL}/api/comment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pseudo: pseudo.value.trim(), message: msg }),
